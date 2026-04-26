@@ -83,3 +83,11 @@ templ unknownComponent(id string, nodeType string, style string, children []temp
 	</div>
 }
 
+templ pluginComponent(id string, pluginType string, style string, children []templ.Component) {
+	<div id={ id } style={ style } data-coreui-plugin={ pluginType }>
+		for _, child := range children {
+			@child
+		}
+	</div>
+}
+

@@ -3,8 +3,9 @@ package goth
 import (
 	"strings"
 
-	"github.com/valueforvalue/coreui/pkg/ast"
 	"github.com/a-h/templ"
+	"github.com/valueforvalue/coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/registry"
 )
 
 // Render converts a CoreUI AST node into a templ component tree.
@@ -162,6 +163,9 @@ func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 			height,
 		)
 	default:
+		if registry.IsPluginComponent(node.Type) {
+			return pluginComponent(id, node.Type, baseStyle(node, theme), children)
+		}
 		return unknownComponent(id, node.Type, baseStyle(node, theme), children)
 	}
 }

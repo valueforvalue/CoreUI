@@ -2,6 +2,7 @@ package registry
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -101,8 +102,8 @@ func loadPluginFile(path string) []string {
 		}
 		if _, isCore := coreNames[pc.Name]; isCore {
 			collisions = append(collisions, pc.Name)
-			// Still load the plugin so the registry reflects the latest definition,
-			// but flag the collision for the doctor check.
+			log.Printf("[CoreUI] CRITICAL: plugin in %q attempts to redefine core component %q — plugin rejected (Core-First rule)", path, pc.Name)
+			continue
 		}
 		spec := convertPluginComponent(pc)
 		componentSpecs[pc.Name] = spec
@@ -160,6 +161,25 @@ func PluginComponentNames() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// IsPluginComponent reports whether name was contributed by a plugin rather
+// than the built-in core registry.
+func IsPluginComponent(name string) bool {
+	if _, isCore := coreNames[name]; isCore {
+		return false
+	}
+	_, ok := componentSpecs[name]
+	return ok
+}
+
+// UnregisterPluginComponent removes a plugin component from the live registry.
+// It is intended for use in tests only; it has no effect on core components.
+func UnregisterPluginComponent(name string) {
+	if _, isCore := coreNames[name]; isCore {
+		return
+	}
+	delete(componentSpecs, name)
 }
 
 // PluginExampleContent is the content of the example plugin file written by

@@ -139,7 +139,9 @@ export class CoreUI {
         element = this.createGraph(attrs);
         break;
       default:
-        return this.createErrorBoundary(`Unknown CoreUI component: ${String(type)}`);
+        console.warn(`CoreUI: plugin component "${String(type)}" has no dedicated renderer — rendering as plugin container.`);
+        element = document.createElement("div");
+        element.dataset.coreuiPlugin = String(type);
     }
 
     this.decorateElement(element, node);
