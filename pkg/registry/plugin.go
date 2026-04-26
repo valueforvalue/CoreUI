@@ -162,9 +162,9 @@ func PluginComponentNames() []string {
 	return names
 }
 
-// pluginExampleJSON is the content of the example plugin file written by
+// PluginExampleContent is the content of the example plugin file written by
 // corec init.
-const PluginExampleJSON = `{
+const PluginExampleContent = `{
   "components": [
     {
       "name": "Rating",

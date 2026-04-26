@@ -170,7 +170,7 @@ func runInit(args []string, stdout io.Writer) error {
 	if err := os.MkdirAll("components", 0o755); err == nil {
 		examplePath := filepath.Join("components", registry.PluginExampleName)
 		if _, statErr := os.Stat(examplePath); errors.Is(statErr, os.ErrNotExist) {
-			_ = os.WriteFile(examplePath, []byte(registry.PluginExampleJSON), 0o644)
+			_ = os.WriteFile(examplePath, []byte(registry.PluginExampleContent), 0o644)
 		}
 	}
 

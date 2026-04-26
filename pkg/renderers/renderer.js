@@ -280,10 +280,12 @@ export class CoreUI {
           return pump();
         });
 
-      pump().catch(() => {
+      pump().catch((err) => {
+        console.error("CoreUI: failed to decompress compressed_src", err);
         img.src = this.asString("");
       });
-    } catch (_) {
+    } catch (err) {
+      console.error("CoreUI: failed to decode compressed_src", err);
       img.src = this.asString("");
     }
   }
