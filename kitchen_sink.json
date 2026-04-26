@@ -1,0 +1,223 @@
+{
+  "tree": {
+    "type": "View",
+    "id": "main_view",
+    "attributes": {
+      "title": "CoreUI Kitchen Sink"
+    },
+    "children": [
+      {
+        "type": "Stack",
+        "id": "main_v_stack",
+        "attributes": {
+          "dir": "v",
+          "gap": "24px"
+        },
+        "children": [
+          {
+            "type": "Stack",
+            "id": "header_h_stack",
+            "attributes": {
+              "align": "center",
+              "dir": "h",
+              "gap": "16px"
+            },
+            "children": [
+              {
+                "type": "Text",
+                "id": "page_title",
+                "attributes": {
+                  "size": "28px",
+                  "value": "Operations Dashboard",
+                  "weight": "bold"
+                }
+              },
+              {
+                "type": "Trigger",
+                "id": "export_csv_button",
+                "attributes": {
+                  "action": {
+                    "call": "export",
+                    "namespace": "io",
+                    "params": {
+                      "format": "csv",
+                      "target": "local"
+                    }
+                  },
+                  "label": "Export CSV"
+                }
+              }
+            ]
+          },
+          {
+            "type": "Grid",
+            "id": "content_grid",
+            "attributes": {
+              "cols": [
+                "1*",
+                "300px"
+              ],
+              "gap": "24px"
+            },
+            "children": [
+              {
+                "type": "Box",
+                "id": "primary_panel",
+                "attributes": {
+                  "background": "#f5f5f5",
+                  "padding": "20px"
+                },
+                "children": [
+                  {
+                    "type": "Text",
+                    "id": "primary_heading",
+                    "attributes": {
+                      "size": "20px",
+                      "value": "Primary Content",
+                      "weight": "bold"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "id": "form_stack",
+                    "attributes": {
+                      "dir": "v",
+                      "gap": "12px"
+                    },
+                    "children": [
+                      {
+                        "type": "Input",
+                        "id": "search_input",
+                        "attributes": {
+                          "bind": "query",
+                          "label": "Search",
+                          "type": "text"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "id": "helper_text",
+                        "attributes": {
+                          "value": "Use the filters in the sidebar to narrow the data."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Box",
+                "id": "sidebar_panel",
+                "attributes": {
+                  "background": "#e5e7eb",
+                  "padding": "20px"
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "id": "sidebar_v_stack",
+                    "attributes": {
+                      "dir": "v",
+                      "gap": "12px"
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "id": "sidebar_heading",
+                        "attributes": {
+                          "size": "18px",
+                          "value": "Filters",
+                          "weight": "bold"
+                        }
+                      },
+                      {
+                        "type": "Trigger",
+                        "id": "refresh_button",
+                        "attributes": {
+                          "action": {
+                            "call": "refresh",
+                            "namespace": "io",
+                            "params": {
+                              "target": "dashboard"
+                            }
+                          },
+                          "label": "Refresh"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "index": {
+    "content_grid": {
+      "path": "/tree/children/0/children/1",
+      "type": "Grid"
+    },
+    "export_csv_button": {
+      "path": "/tree/children/0/children/0/children/1",
+      "type": "Trigger"
+    },
+    "form_stack": {
+      "path": "/tree/children/0/children/1/children/0/children/1",
+      "type": "Stack"
+    },
+    "header_h_stack": {
+      "path": "/tree/children/0/children/0",
+      "type": "Stack"
+    },
+    "helper_text": {
+      "path": "/tree/children/0/children/1/children/0/children/1/children/1",
+      "type": "Text"
+    },
+    "main_v_stack": {
+      "path": "/tree/children/0",
+      "type": "Stack"
+    },
+    "main_view": {
+      "path": "/tree",
+      "type": "View"
+    },
+    "page_title": {
+      "path": "/tree/children/0/children/0/children/0",
+      "type": "Text"
+    },
+    "primary_heading": {
+      "path": "/tree/children/0/children/1/children/0/children/0",
+      "type": "Text"
+    },
+    "primary_panel": {
+      "path": "/tree/children/0/children/1/children/0",
+      "type": "Box"
+    },
+    "refresh_button": {
+      "path": "/tree/children/0/children/1/children/1/children/0/children/1",
+      "type": "Trigger"
+    },
+    "search_input": {
+      "path": "/tree/children/0/children/1/children/0/children/1/children/0",
+      "type": "Input"
+    },
+    "sidebar_heading": {
+      "path": "/tree/children/0/children/1/children/1/children/0/children/0",
+      "type": "Text"
+    },
+    "sidebar_panel": {
+      "path": "/tree/children/0/children/1/children/1",
+      "type": "Box"
+    },
+    "sidebar_v_stack": {
+      "path": "/tree/children/0/children/1/children/1/children/0",
+      "type": "Stack"
+    }
+  },
+  "metadata": {
+    "compiled_at": "2026-04-26T04:22:46Z",
+    "version": "dev"
+  }
+}
