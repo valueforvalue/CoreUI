@@ -1,17 +1,21 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/valueforvalue/coreui/pkg/compiler"
 	"github.com/valueforvalue/coreui/pkg/docs"
+	"github.com/valueforvalue/coreui/pkg/editor"
 	"github.com/valueforvalue/coreui/pkg/registry"
 	"github.com/valueforvalue/coreui/pkg/renderers"
 )
@@ -79,6 +83,13 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "edit" {
+		if err := runEdit(os.Args[2:]); err != nil {
+			log.SetFlags(0)
+			log.Fatalf("%s", err.Error())
+		}
+		return
+	}
 
 	var outputPath string
 	var showVersion bool
@@ -96,7 +107,7 @@ func main() {
 	}
 
 	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec context | corec [-standalone] [-o output.{json|html}] input.cui")
+		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec context | corec edit <file.cui> | corec [-standalone] [-o output.{json|html}] input.cui")
 		os.Exit(1)
 	}
 
@@ -221,4 +232,27 @@ func findProjectFile(name string) (string, error) {
 	}
 
 	return "", fmt.Errorf("could not locate %s", name)
+}
+
+func runEdit(args []string) error {
+	if len(args) != 1 {
+		return errors.New("usage: corec edit <file.cui>")
+	}
+
+	filePath := args[0]
+	if _, err := os.Stat(filePath); err != nil {
+		return fmt.Errorf("cannot open %s: %w", filePath, err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		cancel()
+	}()
+
+	return editor.New(filePath).Run(ctx)
 }
