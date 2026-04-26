@@ -128,8 +128,10 @@ func (a Action) ToDSLString() string {
 
 // escapeActionString escapes backslashes and double quotes within an action
 // string parameter value so that the result can be safely wrapped in `"..."`.
+// Backslashes are escaped first (\ → \\) before quotes (" → \") to avoid
+// double-escaping the backslashes introduced in the first pass.
 func escapeActionString(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `\`, `\\`) // must come first
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	return s
 }

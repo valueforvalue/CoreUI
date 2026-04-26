@@ -266,9 +266,11 @@ func reconstructNumericArray(raw any) (ast.Value, error) {
 }
 
 // marshalEscapeString escapes backslashes and double quotes for use inside
-// a double-quoted DSL string literal.
+// a double-quoted DSL string literal.  Backslashes are escaped first (\ → \\)
+// before quotes (" → \") to avoid double-escaping the backslashes introduced
+// in the first pass.
 func marshalEscapeString(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `\`, `\\`) // must come first
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	return s
 }
