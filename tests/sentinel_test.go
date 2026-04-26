@@ -18,13 +18,14 @@ func TestSentinelGuardrails(t *testing.T) {
 	t.Run("golden kitchen sink json", func(t *testing.T) {
 		tempDir := t.TempDir()
 		actualPath := filepath.Join(tempDir, "kitchen_sink.json")
+		fixturePath := filepath.Join("tests", "fixtures", "kitchen_sink.cui")
 
-		runGo(t, root, "run", "./cmd/corec", "-o", actualPath, "kitchen_sink.cui")
+		runGo(t, root, "run", "./cmd/corec", "-o", actualPath, fixturePath)
 
 		expected := readJSONFixture(t, filepath.Join(root, "tests", "golden", "kitchen_sink.json"))
 		actual := readJSONFixture(t, actualPath)
 		normalImageSrc := imageSourceForID(t, actual, "hero_image")
-		if normalImageSrc != "testdata/coreui-logo.svg" {
+		if normalImageSrc != "coreui-logo.svg" {
 			t.Fatalf("expected normal mode image src to remain a short file path, got %q", normalImageSrc)
 		}
 
@@ -41,8 +42,9 @@ func TestSentinelGuardrails(t *testing.T) {
 	t.Run("standalone html essentials", func(t *testing.T) {
 		tempDir := t.TempDir()
 		htmlPath := filepath.Join(tempDir, "kitchen_sink.html")
+		fixturePath := filepath.Join("tests", "fixtures", "kitchen_sink.cui")
 
-		runGo(t, root, "run", "./cmd/corec", "-standalone", "-o", htmlPath, "kitchen_sink.cui")
+		runGo(t, root, "run", "./cmd/corec", "-standalone", "-o", htmlPath, fixturePath)
 
 		htmlBytes, err := os.ReadFile(htmlPath)
 		if err != nil {
@@ -78,7 +80,7 @@ func TestSentinelGuardrails(t *testing.T) {
 		if !strings.HasPrefix(embeddedImageSrc, "data:image/svg+xml;base64,") {
 			t.Fatalf("expected standalone image src to be an embedded data URL, got %q", embeddedImageSrc)
 		}
-		if len(embeddedImageSrc) <= len("testdata/coreui-logo.svg") {
+		if len(embeddedImageSrc) <= len("coreui-logo.svg") {
 			t.Fatalf("expected standalone image src to be longer than the normal file path, got %d bytes", len(embeddedImageSrc))
 		}
 	})

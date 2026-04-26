@@ -83,7 +83,7 @@
                     "id": "hero_image",
                     "attributes": {
                       "alt": "CoreUI logo",
-                      "src": "testdata/coreui-logo.svg",
+                      "src": "coreui-logo.svg",
                       "width": "200px"
                     }
                   },
@@ -238,7 +238,7 @@
     "surface": "#1e1e1e"
   },
   "metadata": {
-    "compiled_at": "2026-04-26T05:43:23Z",
+    "compiled_at": "2026-04-26T05:59:09Z",
     "version": "dev",
     "registry_version": "1.2.0"
   }

@@ -66,51 +66,14 @@ export class CoreUI {
     style.textContent = `
 :host {
   display: block;
-  color: #111827;
   font-family: Arial, Helvetica, sans-serif;
   ${declarations.join("\n  ")}
 }
 *, *::before, *::after {
   box-sizing: border-box;
 }
- section, div, span, button, input, img, table, caption, tbody, tr, td, th {
+section, div, span, button, input, img, table, caption, tbody, tr, td, th {
   font: inherit;
-}
-button, input {
-  border-radius: 6px;
-}
-button {
-  cursor: pointer;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-  padding: 0.5rem 0.75rem;
-}
-input {
-  width: 100%;
-  border: 1px solid #d1d5db;
-  padding: 0.5rem 0.75rem;
-  background: #ffffff;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-caption {
-  text-align: left;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-[data-coreui-type="View"] {
-  display: block;
-}
-[data-coreui-type="Stack"] {
-  min-width: 0;
-}
-[data-coreui-type="Grid"] {
-  min-width: 0;
-}
-[data-coreui-type="Box"] {
-  min-width: 0;
 }
 [data-coreui-error] {
   border: 1px solid #ef4444;
@@ -318,7 +281,8 @@ caption {
         this.applyStyleProperty(element, "padding", attrs.padding);
         this.applyStyleProperty(element, "background", attrs.background);
         if (typeof attrs.border === "number") {
-          element.style.border = `${attrs.border}px solid #d1d5db`;
+          element.style.borderWidth = `${attrs.border}px`;
+          element.style.borderStyle = "solid";
         }
         break;
       case "Text":

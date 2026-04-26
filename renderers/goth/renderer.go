@@ -1,7 +1,6 @@
 package goth
 
 import (
-	"strconv"
 	"strings"
 
 	"coreui/pkg/ast"
@@ -75,7 +74,10 @@ func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 			decls = append(decls, styleDeclFor("background", background))
 		}
 		if border, ok := intAttribute(node, "border"); ok && border > 0 {
-			decls = append(decls, styleDeclFor("border", strconv.FormatInt(border, 10)+"px solid #d1d5db"))
+			decls = append(decls,
+				styleDeclFor("border-width", formatInt(border)+"px"),
+				styleDeclFor("border-style", "solid"),
+			)
 		}
 
 		return boxComponent(id, baseStyle(node, theme, decls...), children)
@@ -220,6 +222,22 @@ func intAttribute(node *ast.Node, key string) (int64, bool) {
 	}
 	number, ok := value.Data.(int64)
 	return number, ok
+}
+
+func formatInt(value int64) string {
+	if value == 0 {
+		return "0"
+	}
+
+	buf := [20]byte{}
+	pos := len(buf)
+	for value > 0 {
+		pos--
+		buf[pos] = byte('0' + (value % 10))
+		value /= 10
+	}
+
+	return string(buf[pos:])
 }
 
 func actionAttribute(node *ast.Node, key string) (ast.Action, bool) {
