@@ -1,0 +1,16 @@
+View(id="app", title="Ops Console", theme="dark") {
+  Stack(id="layout", dir="v", gap=16px) {
+    Text(id="header", value="Operations", size=24px, weight="bold")
+    Grid(id="content", cols=[1*, 2*], rows=[1*, 1*], gap=8px) {
+      Box(id="filters", padding=12px, border=1, background="surface") {
+        Input(id="query", type="text", label="Search", bind="query")
+        Trigger(id="detailsTrigger", label="Open Details", action=ui:navigate(target=detailsPanel), variant="primary")
+      }
+      DataTable(id="table", source="incidents", selectable=true)
+      Box(id="detailsPanel", padding=16px, border=1, background="panel") {
+        Text(id="detailsText", value="Select a row to inspect details", size=14px, weight="medium")
+        Trigger(id="closePanel", label="Close", action=ui:close(), variant="secondary")
+      }
+    }
+  }
+}

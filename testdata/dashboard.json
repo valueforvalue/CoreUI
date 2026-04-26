@@ -1,0 +1,174 @@
+{
+  "tree": {
+    "type": "View",
+    "id": "app",
+    "attributes": {
+      "theme": "dark",
+      "title": "Ops Console"
+    },
+    "children": [
+      {
+        "type": "Stack",
+        "id": "layout",
+        "attributes": {
+          "dir": "v",
+          "gap": "16px"
+        },
+        "children": [
+          {
+            "type": "Text",
+            "id": "header",
+            "attributes": {
+              "size": "24px",
+              "value": "Operations",
+              "weight": "bold"
+            }
+          },
+          {
+            "type": "Grid",
+            "id": "content",
+            "attributes": {
+              "cols": [
+                "1*",
+                "2*"
+              ],
+              "gap": "8px",
+              "rows": [
+                "1*",
+                "1*"
+              ]
+            },
+            "children": [
+              {
+                "type": "Box",
+                "id": "filters",
+                "attributes": {
+                  "background": "surface",
+                  "border": 1,
+                  "padding": "12px"
+                },
+                "children": [
+                  {
+                    "type": "Input",
+                    "id": "query",
+                    "attributes": {
+                      "bind": "query",
+                      "label": "Search",
+                      "type": "text"
+                    }
+                  },
+                  {
+                    "type": "Trigger",
+                    "id": "detailsTrigger",
+                    "attributes": {
+                      "action": {
+                        "call": "navigate",
+                        "namespace": "ui",
+                        "params": {
+                          "target": "detailsPanel"
+                        }
+                      },
+                      "label": "Open Details",
+                      "variant": "primary"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "DataTable",
+                "id": "table",
+                "attributes": {
+                  "selectable": true,
+                  "source": "incidents"
+                }
+              },
+              {
+                "type": "Box",
+                "id": "detailsPanel",
+                "attributes": {
+                  "background": "panel",
+                  "border": 1,
+                  "padding": "16px"
+                },
+                "children": [
+                  {
+                    "type": "Text",
+                    "id": "detailsText",
+                    "attributes": {
+                      "size": "14px",
+                      "value": "Select a row to inspect details",
+                      "weight": "medium"
+                    }
+                  },
+                  {
+                    "type": "Trigger",
+                    "id": "closePanel",
+                    "attributes": {
+                      "action": {
+                        "call": "close",
+                        "namespace": "ui",
+                        "params": {}
+                      },
+                      "label": "Close",
+                      "variant": "secondary"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "index": {
+    "app": {
+      "path": "/tree",
+      "type": "View"
+    },
+    "closePanel": {
+      "path": "/tree/children/0/children/1/children/2/children/1",
+      "type": "Trigger"
+    },
+    "content": {
+      "path": "/tree/children/0/children/1",
+      "type": "Grid"
+    },
+    "detailsPanel": {
+      "path": "/tree/children/0/children/1/children/2",
+      "type": "Box"
+    },
+    "detailsText": {
+      "path": "/tree/children/0/children/1/children/2/children/0",
+      "type": "Text"
+    },
+    "detailsTrigger": {
+      "path": "/tree/children/0/children/1/children/0/children/1",
+      "type": "Trigger"
+    },
+    "filters": {
+      "path": "/tree/children/0/children/1/children/0",
+      "type": "Box"
+    },
+    "header": {
+      "path": "/tree/children/0/children/0",
+      "type": "Text"
+    },
+    "layout": {
+      "path": "/tree/children/0",
+      "type": "Stack"
+    },
+    "query": {
+      "path": "/tree/children/0/children/1/children/0/children/0",
+      "type": "Input"
+    },
+    "table": {
+      "path": "/tree/children/0/children/1/children/1",
+      "type": "DataTable"
+    }
+  },
+  "metadata": {
+    "compiled_at": "2026-01-01T00:00:00Z",
+    "version": "test"
+  }
+}
