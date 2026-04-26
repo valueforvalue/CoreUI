@@ -51,6 +51,10 @@ templ inputComponent(id string, label string, bind string, inputType string, sty
 	</div>
 }
 
+templ imageComponent(id string, src string, alt string, style string) {
+	<img id={ id } src={ src } alt={ alt } style={ style } data-coreui-type="Image"/>
+}
+
 templ triggerComponent(id string, label string, variant string, hxVals string, style string) {
 	<button id={ id } type="button" data-coreui-type="Trigger" data-coreui-variant={ variant } style={ style } hx-post="/coreui/action" hx-target="#main-content" hx-vals={ hxVals }>
 		{ label }

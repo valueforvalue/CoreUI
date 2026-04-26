@@ -14,6 +14,7 @@ View(id="main_view", title="CoreUI Kitchen Sink") {
         Grid(id="content_grid", cols=[1*, 300px], gap=24px) {
             Box(id="primary_panel", padding=20px, background="surface") {
                 Text(id="primary_heading", value="Primary Content", size=20px, weight="bold")
+                Image(id="hero_image", src="testdata/coreui-logo.svg", width=200px, alt="CoreUI logo")
                 Stack(id="form_stack", dir="v", gap=12px) {
                     Input(id="search_input", type="text", label="Search", bind="query")
                     Text(id="helper_text", value="Use the filters in the sidebar to narrow the data.", style="color: primary")

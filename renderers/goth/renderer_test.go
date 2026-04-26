@@ -103,6 +103,36 @@ func TestRenderTriggerIncludesHTMXActionPayload(t *testing.T) {
 	}
 }
 
+func TestRenderImageIncludesImgTagAndWidth(t *testing.T) {
+	component := Render(ast.Node{
+		Type: "Image",
+		Attributes: map[string]ast.Value{
+			"id":    {Kind: ast.StringKind, Data: "hero_image"},
+			"src":   {Kind: ast.StringKind, Data: "testdata/coreui-logo.svg"},
+			"alt":   {Kind: ast.StringKind, Data: "CoreUI logo"},
+			"width": {Kind: ast.UnitKind, Data: "200px"},
+		},
+	})
+
+	var buf bytes.Buffer
+	if err := component.Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+
+	html := buf.String()
+	for _, want := range []string{
+		`<img`,
+		`id="hero_image"`,
+		`src="testdata/coreui-logo.svg"`,
+		`alt="CoreUI logo"`,
+		`width: 200px`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("expected rendered html to contain %q, got %s", want, html)
+		}
+	}
+}
+
 func TestParseActionRequestFromForm(t *testing.T) {
 	values := url.Values{}
 	values.Set("namespace", "ui")

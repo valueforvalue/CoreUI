@@ -101,6 +101,17 @@ func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 			inputType,
 			baseStyle(node, theme),
 		)
+	case "Image":
+		decls := make([]styleDecl, 0, 1)
+		if width := UnitToCSS(unitAttribute(node, "width"), UnitContextLiteral); width != "" {
+			decls = append(decls, styleDeclFor("width", width))
+		}
+		return imageComponent(
+			id,
+			stringAttribute(node, "src"),
+			stringAttribute(node, "alt"),
+			baseStyle(node, theme, decls...),
+		)
 	case "Trigger":
 		action, _ := actionAttribute(node, "action")
 		payload := encodeActionRequest(actionRequestFromAction(action))

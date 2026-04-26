@@ -35,6 +35,7 @@ UI components support `id` (String - Mandatory), `hidden` (Bool), and `style` (S
 | **Box** | padding (Unit), border (Int), background |
 | **Text** | value, size (Unit), weight |
 | **Input** | type, label, bind |
+| **Image** | src (String - Mandatory), width (Unit), alt |
 | **Trigger** | label, action, variant |
 | **DataTable**| source, selectable (Bool) |
 
@@ -56,4 +57,4 @@ The compiler must produce a JSON object with:
 3. `theme`: A flat map of thematic tokens, where `key = Color.key` and `value = Color.value`.
 4. `metadata`: Compilation timestamp and compiler version.
 
-Action values are sub-parsed and emitted inline at `tree.attributes.action` rather than as a separate top-level collection. `Theme` is treated as a top-level metadata definition and is not included in the UI `tree`.
+Action values are sub-parsed and emitted inline at `tree.attributes.action` rather than as a separate top-level collection. `Theme` is treated as a top-level metadata definition and is not included in the UI `tree`. `Image.src` remains a plain path in normal compilation and is upgraded to a Base64 `data:` URL only for standalone output when the local file can be resolved.

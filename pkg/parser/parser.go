@@ -10,6 +10,7 @@ import (
 	"coreui/pkg/diag"
 	"coreui/pkg/lexer"
 	"coreui/pkg/registry"
+	"coreui/pkg/utils"
 )
 
 type Parser struct {
@@ -140,6 +141,11 @@ func (p *Parser) parseComponent() (*ast.Node, error) {
 	}
 
 	if p.current.Type == lexer.LBrace {
+		spec, _ := registry.GetComponent(componentType)
+		if !spec.HasChildren {
+			return nil, diag.New(componentToken.Line, componentToken.Col, fmt.Sprintf("%s does not accept children", componentType))
+		}
+
 		p.advance()
 		for p.current.Type != lexer.RBrace {
 			if p.current.Type == lexer.EOF {
@@ -181,7 +187,7 @@ func (p *Parser) parseAttribute(componentType string) (string, ast.Value, error)
 	key := keyToken.Literal
 
 	if !registry.IsAttributeAllowed(componentType, key) {
-		return "", ast.Value{}, diag.Newf(keyToken.Line, keyToken.Col, "unknown attribute %q for %s", key, componentType)
+		return "", ast.Value{}, diag.New(keyToken.Line, keyToken.Col, p.unknownAttributeMessage(componentType, key))
 	}
 
 	p.advance()
@@ -405,6 +411,14 @@ func (p *Parser) extractTheme(node *ast.Node) (map[string]string, error) {
 func (p *Parser) stringValue(value ast.Value) string {
 	text, _ := value.Data.(string)
 	return text
+}
+
+func (p *Parser) unknownAttributeMessage(componentType, attribute string) string {
+	validAttributes := registry.ValidAttributes(componentType)
+	if suggestion, ok := utils.ClosestMatch(attribute, validAttributes, 2); ok {
+		return fmt.Sprintf("Unknown attribute '%s' for component '%s'. Did you mean '%s'?", attribute, componentType, suggestion)
+	}
+	return fmt.Sprintf("unknown attribute %q for %s", attribute, componentType)
 }
 
 func (p *Parser) expect(expected lexer.TokenType, message string) (lexer.Token, error) {

@@ -129,3 +129,27 @@ func TestParserAcceptsAppNamespaceAction(t *testing.T) {
 		t.Fatalf("unexpected params: %+v", action.Params)
 	}
 }
+
+func TestParserSuggestsClosestAttributeName(t *testing.T) {
+	source := `Box(id="b1", pading=10px)`
+
+	_, err := parser.New(source).Parse()
+	if err == nil {
+		t.Fatal("expected typo suggestion error")
+	}
+	if !strings.Contains(err.Error(), "Did you mean 'padding'?") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParserSuggestsBackgroundAttribute(t *testing.T) {
+	source := `Box(id="b1", backgroud="primary")`
+
+	_, err := parser.New(source).Parse()
+	if err == nil {
+		t.Fatal("expected typo suggestion error")
+	}
+	if !strings.Contains(err.Error(), "Did you mean 'background'?") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

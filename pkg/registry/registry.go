@@ -2,8 +2,15 @@ package registry
 
 import (
 	"fmt"
+	"sort"
 
 	"coreui/pkg/ast"
+)
+
+const (
+	Version             = "1.2.0"
+	SchemaCompatibility = "1.0"
+	LastUpdated         = "2026-04-26"
 )
 
 type ValueType string
@@ -25,8 +32,9 @@ type AttributeSpec struct {
 }
 
 type ComponentSpec struct {
-	Name       string
-	Attributes map[string]AttributeSpec
+	Name        string
+	HasChildren bool
+	Attributes  map[string]AttributeSpec
 }
 
 var commonAttributes = map[string]AttributeSpec{
@@ -37,14 +45,16 @@ var commonAttributes = map[string]AttributeSpec{
 
 var componentSpecs = map[string]ComponentSpec{
 	"View": {
-		Name: "View",
+		Name:        "View",
+		HasChildren: true,
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"title": {Type: StringType},
 			"theme": {Type: StringType},
 		}),
 	},
 	"Stack": {
-		Name: "Stack",
+		Name:        "Stack",
+		HasChildren: true,
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"dir":   {Type: StringType, Enum: enumSet("h", "v")},
 			"gap":   {Type: UnitType},
@@ -52,7 +62,8 @@ var componentSpecs = map[string]ComponentSpec{
 		}),
 	},
 	"Grid": {
-		Name: "Grid",
+		Name:        "Grid",
+		HasChildren: true,
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"cols": {Type: UnitArrayType},
 			"rows": {Type: UnitArrayType},
@@ -60,7 +71,8 @@ var componentSpecs = map[string]ComponentSpec{
 		}),
 	},
 	"Box": {
-		Name: "Box",
+		Name:        "Box",
+		HasChildren: true,
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"padding":    {Type: UnitType},
 			"border":     {Type: IntType},
@@ -83,6 +95,14 @@ var componentSpecs = map[string]ComponentSpec{
 			"bind":  {Type: StringType},
 		}),
 	},
+	"Image": {
+		Name: "Image",
+		Attributes: mergeCommon(map[string]AttributeSpec{
+			"src":   {Type: StringType, Required: true},
+			"width": {Type: UnitType},
+			"alt":   {Type: StringType},
+		}),
+	},
 	"Trigger": {
 		Name: "Trigger",
 		Attributes: mergeCommon(map[string]AttributeSpec{
@@ -99,8 +119,9 @@ var componentSpecs = map[string]ComponentSpec{
 		}),
 	},
 	"Theme": {
-		Name:       "Theme",
-		Attributes: mergeCommon(map[string]AttributeSpec{}),
+		Name:        "Theme",
+		HasChildren: true,
+		Attributes:  mergeCommon(map[string]AttributeSpec{}),
 	},
 	"Color": {
 		Name: "Color",
@@ -135,6 +156,23 @@ func GetComponent(name string) (ComponentSpec, bool) {
 	return spec, ok
 }
 
+func AllComponents() []ComponentSpec {
+	names := make([]string, 0, len(componentSpecs))
+	for name := range componentSpecs {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	components := make([]ComponentSpec, 0, len(names))
+	for _, name := range names {
+		spec := componentSpecs[name]
+		spec.Attributes = cloneAttributes(spec.Attributes)
+		components = append(components, spec)
+	}
+
+	return components
+}
+
 func IsAttributeAllowed(component, attr string) bool {
 	spec, ok := componentSpecs[component]
 	if !ok {
@@ -143,6 +181,20 @@ func IsAttributeAllowed(component, attr string) bool {
 
 	_, ok = spec.Attributes[attr]
 	return ok
+}
+
+func ValidAttributes(component string) []string {
+	spec, ok := componentSpecs[component]
+	if !ok {
+		return nil
+	}
+
+	attributes := make([]string, 0, len(spec.Attributes))
+	for key := range spec.Attributes {
+		attributes = append(attributes, key)
+	}
+	sort.Strings(attributes)
+	return attributes
 }
 
 func RequiredAttributes(component string) []string {
@@ -234,4 +286,12 @@ func ValidateValue(component, attr string, value ast.Value) error {
 	}
 
 	return nil
+}
+
+func cloneAttributes(attributes map[string]AttributeSpec) map[string]AttributeSpec {
+	cloned := make(map[string]AttributeSpec, len(attributes))
+	for key, spec := range attributes {
+		cloned[key] = spec
+	}
+	return cloned
 }

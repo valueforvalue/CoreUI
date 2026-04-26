@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"coreui/pkg/ast"
+	"coreui/pkg/registry"
 )
 
 type IndexEntry struct {
@@ -12,8 +13,9 @@ type IndexEntry struct {
 }
 
 type Metadata struct {
-	CompiledAt string `json:"compiled_at"`
-	Version    string `json:"version"`
+	CompiledAt      string `json:"compiled_at"`
+	Version         string `json:"version"`
+	RegistryVersion string `json:"registry_version"`
 }
 
 type Node struct {
@@ -42,8 +44,9 @@ func Build(document *ast.Document, compiledAt time.Time, version string) Output 
 		Index: index,
 		Theme: cloneTheme(document),
 		Metadata: Metadata{
-			CompiledAt: compiledAt.UTC().Format(time.RFC3339),
-			Version:    version,
+			CompiledAt:      compiledAt.UTC().Format(time.RFC3339),
+			Version:         version,
+			RegistryVersion: registry.Version,
 		},
 	}
 }

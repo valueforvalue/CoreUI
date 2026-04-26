@@ -1,4 +1,36 @@
-/**
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CoreUI Standalone</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+    }
+    body {
+      background: #f5f7fb;
+      color: #111827;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #0f172a;
+        color: #e5e7eb;
+      }
+    }
+    #coreui-root {
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="coreui-root"></div>
+  <script type="module">/**
  * Vanilla JS renderer for CoreUI compiler output.
  */
 export class CoreUI {
@@ -532,3 +564,259 @@ caption {
 }
 
 export default CoreUI;
+
+window.CoreUI = CoreUI;
+</script>
+  <script type="module">
+    const jsonData = {
+  "tree": {
+    "type": "View",
+    "id": "main_view",
+    "attributes": {
+      "title": "CoreUI Kitchen Sink"
+    },
+    "children": [
+      {
+        "type": "Stack",
+        "id": "main_v_stack",
+        "attributes": {
+          "dir": "v",
+          "gap": "24px"
+        },
+        "children": [
+          {
+            "type": "Stack",
+            "id": "header_h_stack",
+            "attributes": {
+              "align": "center",
+              "dir": "h",
+              "gap": "16px"
+            },
+            "children": [
+              {
+                "type": "Text",
+                "id": "page_title",
+                "attributes": {
+                  "size": "28px",
+                  "style": "color: primary",
+                  "value": "Operations Dashboard",
+                  "weight": "bold"
+                }
+              },
+              {
+                "type": "Trigger",
+                "id": "export_csv_button",
+                "attributes": {
+                  "action": {
+                    "call": "export",
+                    "namespace": "io",
+                    "params": {
+                      "format": "csv",
+                      "target": "local"
+                    }
+                  },
+                  "label": "Export CSV"
+                }
+              }
+            ]
+          },
+          {
+            "type": "Grid",
+            "id": "content_grid",
+            "attributes": {
+              "cols": [
+                "1*",
+                "300px"
+              ],
+              "gap": "24px"
+            },
+            "children": [
+              {
+                "type": "Box",
+                "id": "primary_panel",
+                "attributes": {
+                  "background": "surface",
+                  "padding": "20px"
+                },
+                "children": [
+                  {
+                    "type": "Text",
+                    "id": "primary_heading",
+                    "attributes": {
+                      "size": "20px",
+                      "value": "Primary Content",
+                      "weight": "bold"
+                    }
+                  },
+                  {
+                    "type": "Image",
+                    "id": "hero_image",
+                    "attributes": {
+                      "alt": "CoreUI logo",
+                      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgODAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbGxlZGJ5PSJ0aXRsZSI+DQogIDx0aXRsZT5Db3JlVUk8L3RpdGxlPg0KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjgwIiByeD0iMTQiIGZpbGw9IiMwOTg0ZTMiLz4NCiAgPGNpcmNsZSBjeD0iNDIiIGN5PSI0MCIgcj0iMTYiIGZpbGw9IiNmZmZmZmYiLz4NCiAgPHBhdGggZD0iTTg4IDI0aDE4YzEzLjI1NSAwIDI0IDEwLjc0NSAyNCAyNFMxMTkuMjU1IDcyIDEwNiA3Mkg4OFYyNHptMTggMTRoLTR2MjBoNGM1LjUyMyAwIDEwLTQuNDc3IDEwLTEwcy00LjQ3Ny0xMC0xMC0xMHoiIGZpbGw9IiNmZmZmZmYiLz4NCiAgPHBhdGggZD0iTTE0MiAyNGgxNGwxMiA0OGgtMTRsLTItOGgtMTRsLTIgOGgtMTRsMTItNDh6bS0xIDMwaDhsLTQtMTYtNCAxNnoiIGZpbGw9IiNmZmZmZmYiLz4NCjwvc3ZnPg0K",
+                      "width": "200px"
+                    }
+                  },
+                  {
+                    "type": "Stack",
+                    "id": "form_stack",
+                    "attributes": {
+                      "dir": "v",
+                      "gap": "12px"
+                    },
+                    "children": [
+                      {
+                        "type": "Input",
+                        "id": "search_input",
+                        "attributes": {
+                          "bind": "query",
+                          "label": "Search",
+                          "type": "text"
+                        }
+                      },
+                      {
+                        "type": "Text",
+                        "id": "helper_text",
+                        "attributes": {
+                          "style": "color: primary",
+                          "value": "Use the filters in the sidebar to narrow the data."
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "Box",
+                "id": "sidebar_panel",
+                "attributes": {
+                  "background": "sidebar",
+                  "padding": "20px"
+                },
+                "children": [
+                  {
+                    "type": "Stack",
+                    "id": "sidebar_v_stack",
+                    "attributes": {
+                      "dir": "v",
+                      "gap": "12px"
+                    },
+                    "children": [
+                      {
+                        "type": "Text",
+                        "id": "sidebar_heading",
+                        "attributes": {
+                          "size": "18px",
+                          "value": "Filters",
+                          "weight": "bold"
+                        }
+                      },
+                      {
+                        "type": "Trigger",
+                        "id": "refresh_button",
+                        "attributes": {
+                          "action": {
+                            "call": "refresh",
+                            "namespace": "io",
+                            "params": {
+                              "target": "dashboard"
+                            }
+                          },
+                          "label": "Refresh"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "index": {
+    "content_grid": {
+      "path": "/tree/children/0/children/1",
+      "type": "Grid"
+    },
+    "export_csv_button": {
+      "path": "/tree/children/0/children/0/children/1",
+      "type": "Trigger"
+    },
+    "form_stack": {
+      "path": "/tree/children/0/children/1/children/0/children/2",
+      "type": "Stack"
+    },
+    "header_h_stack": {
+      "path": "/tree/children/0/children/0",
+      "type": "Stack"
+    },
+    "helper_text": {
+      "path": "/tree/children/0/children/1/children/0/children/2/children/1",
+      "type": "Text"
+    },
+    "hero_image": {
+      "path": "/tree/children/0/children/1/children/0/children/1",
+      "type": "Image"
+    },
+    "main_v_stack": {
+      "path": "/tree/children/0",
+      "type": "Stack"
+    },
+    "main_view": {
+      "path": "/tree",
+      "type": "View"
+    },
+    "page_title": {
+      "path": "/tree/children/0/children/0/children/0",
+      "type": "Text"
+    },
+    "primary_heading": {
+      "path": "/tree/children/0/children/1/children/0/children/0",
+      "type": "Text"
+    },
+    "primary_panel": {
+      "path": "/tree/children/0/children/1/children/0",
+      "type": "Box"
+    },
+    "refresh_button": {
+      "path": "/tree/children/0/children/1/children/1/children/0/children/1",
+      "type": "Trigger"
+    },
+    "search_input": {
+      "path": "/tree/children/0/children/1/children/0/children/2/children/0",
+      "type": "Input"
+    },
+    "sidebar_heading": {
+      "path": "/tree/children/0/children/1/children/1/children/0/children/0",
+      "type": "Text"
+    },
+    "sidebar_panel": {
+      "path": "/tree/children/0/children/1/children/1",
+      "type": "Box"
+    },
+    "sidebar_v_stack": {
+      "path": "/tree/children/0/children/1/children/1/children/0",
+      "type": "Stack"
+    }
+  },
+  "theme": {
+    "panel": "#2d3436",
+    "primary": "#0984e3",
+    "sidebar": "#dfe6e9",
+    "surface": "#1e1e1e"
+  },
+  "metadata": {
+    "compiled_at": "2026-04-26T05:43:23Z",
+    "version": "dev",
+    "registry_version": "1.2.0"
+  }
+}
+;
+    document.addEventListener("DOMContentLoaded", () => {
+      new window.CoreUI(jsonData).render(document.getElementById("coreui-root"));
+    });
+  </script>
+</body>
+</html>
