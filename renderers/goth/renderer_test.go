@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/valueforvalue/coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/registry"
 )
 
 func TestUnitToCSS(t *testing.T) {
@@ -218,5 +221,48 @@ func TestHandleActionInvokesExecutor(t *testing.T) {
 	}
 	if body := recorder.Body.String(); body != "ok" {
 		t.Fatalf("unexpected body: %q", body)
+	}
+}
+
+func TestRenderPluginComponentUsesDataCoreuiPlugin(t *testing.T) {
+	// Register a synthetic plugin component so the renderer can detect it.
+	// This test uses an internal (same-package) call to the registry helper.
+	// We load a temporary plugin using LoadPluginsFromDir on a pre-seeded temp dir.
+	dir := t.TempDir()
+	pluginJSON := `{
+		"components": [
+			{
+				"name": "TestPlugin",
+				"has_children": true,
+				"attributes": {
+					"id": { "type": "string", "required": true }
+				}
+			}
+		]
+	}`
+	if err := os.WriteFile(filepath.Join(dir, "testplugin.json"), []byte(pluginJSON), 0o644); err != nil {
+		t.Fatalf("write plugin: %v", err)
+	}
+	registry.LoadPluginsFromDir(dir)
+	t.Cleanup(func() { registry.UnregisterPluginComponent("TestPlugin") })
+
+	component := Render(ast.Node{
+		Type: "TestPlugin",
+		Attributes: map[string]ast.Value{
+			"id": {Kind: ast.StringKind, Data: "plug1"},
+		},
+	})
+
+	var buf bytes.Buffer
+	if err := component.Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+
+	html := buf.String()
+	if !strings.Contains(html, `data-coreui-plugin="TestPlugin"`) {
+		t.Fatalf("expected data-coreui-plugin attribute, got %s", html)
+	}
+	if strings.Contains(html, `data-coreui-type="TestPlugin"`) {
+		t.Fatalf("plugin component must not use data-coreui-type, got %s", html)
 	}
 }

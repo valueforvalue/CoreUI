@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/valueforvalue/coreui/pkg/ast"
 	"github.com/a-h/templ"
+	"github.com/valueforvalue/coreui/pkg/ast"
 )
 
 // UnitContext controls how fractional CoreUI units are translated to CSS.

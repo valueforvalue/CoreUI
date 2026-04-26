@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/valueforvalue/coreui/pkg/ast"
 	"github.com/a-h/templ"
+	"github.com/valueforvalue/coreui/pkg/ast"
 )
 
 // ActionRequest is the HTMX action payload emitted by Trigger components.
