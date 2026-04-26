@@ -10,7 +10,7 @@ import (
 
 const (
 	// Version is the current published registry version.
-	Version = "1.3.0"
+	Version = "1.5.0"
 	// SchemaCompatibility tracks the JSON schema compatibility contract.
 	SchemaCompatibility = "1.0"
 	// LastUpdated records the most recent registry catalog update date.
@@ -173,9 +173,10 @@ var componentSpecs = map[string]ComponentSpec{
 	"Image": {
 		Name: "Image",
 		Attributes: mergeCommon(map[string]AttributeSpec{
-			"src":   {Type: StringType, Required: true},
-			"width": {Type: UnitType},
-			"alt":   {Type: StringType},
+			"src":            {Type: StringType},
+			"compressed_src": {Type: StringType, DocType: "Base64-gzipped image"},
+			"width":          {Type: UnitType},
+			"alt":            {Type: StringType},
 		}),
 	},
 	"Trigger": {

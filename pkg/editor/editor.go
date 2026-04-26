@@ -3,10 +3,14 @@
 package editor
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -53,6 +57,7 @@ func New(filePath string) *Editor {
 	mux.HandleFunc("/api/registry", e.handleRegistry)
 	mux.HandleFunc("/api/compile", e.handleCompile)
 	mux.HandleFunc("/api/preview", e.handlePreview)
+	mux.HandleFunc("/api/upload", e.handleUpload)
 	e.mux = mux
 	return e
 }
@@ -194,6 +199,43 @@ func (e *Editor) handlePreview(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = fmt.Fprint(w, html)
+}
+
+// handleUpload accepts a raw image body (jpg, png, or webp), gzip-compresses
+// it, base64-encodes the result, and returns the compressed_src value as JSON.
+func (e *Editor) handleUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	const maxSize = 20 << 20 // 20 MiB
+	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
+
+	imgBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read image body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(imgBytes) == 0 {
+		http.Error(w, "empty image body", http.StatusBadRequest)
+		return
+	}
+
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write(imgBytes); err != nil {
+		http.Error(w, "compression error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := gz.Close(); err != nil {
+		http.Error(w, "compression close error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"compressed_src": encoded})
 }
 
 // specToAttributeInfo converts a registry ComponentSpec into a sorted slice of

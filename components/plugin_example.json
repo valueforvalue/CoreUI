@@ -1,0 +1,16 @@
+{
+  "components": [
+    {
+      "name": "Rating",
+      "has_children": false,
+      "attributes": {
+        "id":        { "type": "string",  "required": true },
+        "value":     { "type": "int" },
+        "max":       { "type": "int" },
+        "on_change": { "type": "action" },
+        "hidden":    { "type": "bool" },
+        "style":     { "type": "string" }
+      }
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -76,6 +77,13 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "doctor" {
+		if err := runDoctor(os.Stdout); err != nil {
+			log.SetFlags(0)
+			log.Fatalf("%s", err.Error())
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "context" {
 		if err := runContext(os.Stdout); err != nil {
 			log.SetFlags(0)
@@ -107,7 +115,7 @@ func main() {
 	}
 
 	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec context | corec edit <file.cui> | corec [-standalone] [-o output.{json|html}] input.cui")
+		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec doctor | corec context | corec edit <file.cui> | corec [-standalone] [-o output.{json|html}] input.cui")
 		os.Exit(1)
 	}
 
@@ -158,6 +166,14 @@ func runInit(args []string, stdout io.Writer) error {
 		return err
 	}
 
+	// Create the ./components directory and write the plugin example file.
+	if err := os.MkdirAll("components", 0o755); err == nil {
+		examplePath := filepath.Join("components", registry.PluginExampleName)
+		if _, statErr := os.Stat(examplePath); errors.Is(statErr, os.ErrNotExist) {
+			_ = os.WriteFile(examplePath, []byte(registry.PluginExampleJSON), 0o644)
+		}
+	}
+
 	fmt.Fprintf(stdout, "[Success] Initialized '%s'\n\nQuick Start:\n1. Edit '%s' to design your UI.\n2. Run 'corec -s %s' to bundle it.\n3. Open '%s' in any browser.\n", fileName, fileName, fileName, defaultOutputPath(fileName, true))
 	return nil
 }
@@ -180,6 +196,97 @@ func runContext(stdout io.Writer) error {
 
 	_, err = io.WriteString(stdout, content)
 	return err
+}
+
+// runDoctor performs a suite of environmental health checks and prints a
+// PASS/FAIL report with remediation steps for any failures.
+func runDoctor(stdout io.Writer) error {
+	type check struct {
+		name string
+		run  func() (passed bool, detail string)
+	}
+
+	checks := []check{
+		{
+			name: "Registry Health (no core/plugin name collisions)",
+			run: func() (bool, string) {
+				collisions := registry.RegistryCollisions()
+				if len(collisions) == 0 {
+					return true, "No naming collisions detected."
+				}
+				return false, fmt.Sprintf(
+					"Plugin components shadow core names: %s\n  Remediation: rename the plugin components in ./components/*.json.",
+					strings.Join(collisions, ", "),
+				)
+			},
+		},
+		{
+			name: "Asset Health (renderer assets loaded in memory)",
+			run: func() (bool, string) {
+				js := renderers.GetRendererJS()
+				css := renderers.GetBaseCSS()
+				if len(js) == 0 {
+					return false, "renderer.js is empty or failed to embed.\n  Remediation: rebuild the binary with `go build ./cmd/corec`."
+				}
+				if len(css) == 0 {
+					return false, "base.css is empty or failed to embed.\n  Remediation: rebuild the binary with `go build ./cmd/corec`."
+				}
+				return true, fmt.Sprintf("renderer.js (%d bytes), base.css (%d bytes) loaded.", len(js), len(css))
+			},
+		},
+		{
+			name: "Write Permissions (current directory)",
+			run: func() (bool, string) {
+				probe := ".corec_doctor_probe"
+				if err := os.WriteFile(probe, []byte("ok"), 0o600); err != nil {
+					return false, fmt.Sprintf("Cannot write to current directory: %v\n  Remediation: check directory permissions with `ls -ld .`.", err)
+				}
+				_ = os.Remove(probe)
+				return true, "Write access confirmed for current directory."
+			},
+		},
+		{
+			name: "Write Permissions (./history directory)",
+			run: func() (bool, string) {
+				if err := os.MkdirAll("history", 0o755); err != nil {
+					return false, fmt.Sprintf("Cannot create ./history: %v\n  Remediation: check directory permissions.", err)
+				}
+				probe := filepath.Join("history", ".corec_doctor_probe")
+				if err := os.WriteFile(probe, []byte("ok"), 0o600); err != nil {
+					return false, fmt.Sprintf("Cannot write to ./history: %v\n  Remediation: check directory permissions.", err)
+				}
+				_ = os.Remove(probe)
+				return true, "Write access confirmed for ./history."
+			},
+		},
+		{
+			name: "Port Availability (edit server default range 49152–65535)",
+			run: func() (bool, string) {
+				ln, err := net.Listen("tcp", "127.0.0.1:0")
+				if err != nil {
+					return false, fmt.Sprintf("Cannot bind a local TCP port: %v\n  Remediation: check firewall or per-process socket limits.", err)
+				}
+				_ = ln.Close()
+				return true, fmt.Sprintf("Successfully bound ephemeral port %s.", ln.Addr().String())
+			},
+		},
+	}
+
+	passes := 0
+	for _, c := range checks {
+		passed, detail := c.run()
+		marker := "PASS"
+		if !passed {
+			marker = "FAIL"
+		} else {
+			passes++
+		}
+		fmt.Fprintf(stdout, "[%s] %s\n      %s\n\n", marker, c.name, detail)
+	}
+
+	fmt.Fprintf(stdout, "─────────────────────────────────────────\n")
+	fmt.Fprintf(stdout, "Results: %d/%d checks passed.\n", passes, len(checks))
+	return nil
 }
 
 func initFileName(projectName string) string {

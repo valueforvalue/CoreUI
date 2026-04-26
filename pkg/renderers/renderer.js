@@ -234,9 +234,58 @@ export class CoreUI {
 
   createImage(attrs) {
     const image = document.createElement("img");
-    image.src = this.asString(attrs.src);
+
+    const compressedSrc = this.asString(attrs.compressed_src);
+    if (compressedSrc) {
+      this.decompressAndSetSrc(image, compressedSrc);
+    } else {
+      image.src = this.asString(attrs.src);
+    }
+
     image.alt = this.asString(attrs.alt);
     return image;
+  }
+
+  /**
+   * Decompresses a gzip+base64 encoded image and sets the src of img as a
+   * blob URL once the decompression stream resolves.
+   *
+   * @param {HTMLImageElement} img
+   * @param {string} compressed - Base64-encoded gzip blob
+   */
+  decompressAndSetSrc(img, compressed) {
+    try {
+      const binary = atob(compressed);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      const ds = new DecompressionStream("gzip");
+      const writer = ds.writable.getWriter();
+      const reader = ds.readable.getReader();
+
+      writer.write(bytes);
+      writer.close();
+
+      const chunks = [];
+      const pump = () =>
+        reader.read().then(({ done, value }) => {
+          if (done) {
+            const blob = new Blob(chunks);
+            img.src = URL.createObjectURL(blob);
+            return;
+          }
+          chunks.push(value);
+          return pump();
+        });
+
+      pump().catch(() => {
+        img.src = this.asString("");
+      });
+    } catch (_) {
+      img.src = this.asString("");
+    }
   }
 
   createDataTable(attrs) {
