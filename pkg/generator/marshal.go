@@ -188,7 +188,7 @@ func reconstructValue(raw any, vtype registry.ValueType) (ast.Value, error) {
 		rawParams, _ := m["params"].(map[string]any)
 		params := make(map[string]ast.Value, len(rawParams))
 		for k, pv := range rawParams {
-			pval, err := reconstructValue(pv, registry.StringType)
+			pval, err := inferActionParamValue(pv)
 			if err != nil {
 				return ast.Value{}, fmt.Errorf("action param %q: %w", k, err)
 			}
@@ -206,6 +206,27 @@ func reconstructValue(raw any, vtype registry.ValueType) (ast.Value, error) {
 			return ast.Value{}, fmt.Errorf("unsupported type %q for value %T", vtype, raw)
 		}
 		return ast.Value{Kind: ast.StringKind, Data: s}, nil
+	}
+}
+
+// inferActionParamValue infers the ast.Value kind from the native Go type of an
+// action parameter value decoded from JSON.  Action params support string, bool,
+// int, float64, and unit (a string suffixed with px/% etc.).
+func inferActionParamValue(raw any) (ast.Value, error) {
+	switch v := raw.(type) {
+	case string:
+		return ast.Value{Kind: ast.StringKind, Data: v}, nil
+	case bool:
+		return ast.Value{Kind: ast.BoolKind, Data: v}, nil
+	case float64:
+		if v == float64(int64(v)) {
+			return ast.Value{Kind: ast.IntKind, Data: int64(v)}, nil
+		}
+		return ast.Value{Kind: ast.NumberKind, Data: v}, nil
+	case int64:
+		return ast.Value{Kind: ast.IntKind, Data: v}, nil
+	default:
+		return ast.Value{}, fmt.Errorf("unsupported action param type %T", raw)
 	}
 }
 

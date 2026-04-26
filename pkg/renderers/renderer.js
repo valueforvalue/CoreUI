@@ -160,7 +160,9 @@ export class CoreUI {
             } else {
               val = String(raw);
             }
-            element.dataset[`cui_${safeKey}`] = val;
+            // Use setAttribute so the DOM attribute name is "data-cui-{key}",
+            // matching the data-cui-* attributes emitted by the GOTH renderer.
+            element.setAttribute(`data-cui-${safeKey}`, val);
           });
         }
     }
