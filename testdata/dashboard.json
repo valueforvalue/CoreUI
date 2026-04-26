@@ -167,6 +167,11 @@
       "type": "DataTable"
     }
   },
+  "theme": {
+    "panel": "#2d3436",
+    "primary": "#0984e3",
+    "surface": "#1e1e1e"
+  },
   "metadata": {
     "compiled_at": "2026-01-01T00:00:00Z",
     "version": "test"

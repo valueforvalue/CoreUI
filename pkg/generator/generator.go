@@ -26,16 +26,21 @@ type Node struct {
 type Output struct {
 	Tree     *Node                 `json:"tree"`
 	Index    map[string]IndexEntry `json:"index"`
+	Theme    map[string]string     `json:"theme,omitempty"`
 	Metadata Metadata              `json:"metadata"`
 }
 
-func Build(root *ast.Node, compiledAt time.Time, version string) Output {
+func Build(document *ast.Document, compiledAt time.Time, version string) Output {
 	index := map[string]IndexEntry{}
-	tree := buildNode(root, "/tree", index)
+	var tree *Node
+	if document != nil && document.Tree != nil {
+		tree = buildNode(document.Tree, "/tree", index)
+	}
 
 	return Output{
 		Tree:  tree,
 		Index: index,
+		Theme: cloneTheme(document),
 		Metadata: Metadata{
 			CompiledAt: compiledAt.UTC().Format(time.RFC3339),
 			Version:    version,
@@ -136,4 +141,15 @@ func itoa(value int) string {
 	}
 
 	return string(buf[pos:])
+}
+
+func cloneTheme(document *ast.Document) map[string]string {
+	if document == nil || len(document.Theme) == 0 {
+		return nil
+	}
+	theme := make(map[string]string, len(document.Theme))
+	for key, value := range document.Theme {
+		theme[key] = value
+	}
+	return theme
 }

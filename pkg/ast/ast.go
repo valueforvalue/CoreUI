@@ -28,6 +28,11 @@ type Action struct {
 	Params    map[string]Value
 }
 
+type Document struct {
+	Tree  *Node
+	Theme map[string]string
+}
+
 type Node struct {
 	Type       string
 	Attributes map[string]Value

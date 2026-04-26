@@ -24,12 +24,12 @@ func CompileSource(name, source string, options Options) ([]byte, error) {
 		options.Version = "dev"
 	}
 
-	root, err := parser.New(source).Parse()
+	document, err := parser.New(source).ParseDocument()
 	if err != nil {
 		return nil, err
 	}
 
-	output := generator.Build(root, options.Timestamp, options.Version)
+	output := generator.Build(document, options.Timestamp, options.Version)
 	data, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		return nil, err

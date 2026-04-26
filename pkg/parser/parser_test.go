@@ -59,3 +59,42 @@ func TestParserRejectsMalformedAction(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestParserExtractsTopLevelThemeDocument(t *testing.T) {
+	source := `
+Theme(id="service_dark") {
+  Color(key="primary", value="#0984e3"),
+  Color(key="surface", value="#1e1e1e")
+}
+View(id="root") {
+  Box(id="panel", background="surface")
+}
+`
+
+	document, err := parser.New(source).ParseDocument()
+	if err != nil {
+		t.Fatalf("parse document: %v", err)
+	}
+	if document.Tree == nil || document.Tree.Type != "View" {
+		t.Fatalf("expected view tree, got %+v", document.Tree)
+	}
+	if document.Theme["primary"] != "#0984e3" || document.Theme["surface"] != "#1e1e1e" {
+		t.Fatalf("unexpected theme map: %+v", document.Theme)
+	}
+}
+
+func TestParserRejectsColorOutsideTheme(t *testing.T) {
+	source := `
+View(id="root") {
+  Color(key="primary", value="#0984e3")
+}
+`
+
+	_, err := parser.New(source).ParseDocument()
+	if err == nil {
+		t.Fatal("expected color placement error")
+	}
+	if !strings.Contains(err.Error(), "Color must be inside Theme") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

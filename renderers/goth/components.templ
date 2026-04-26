@@ -1,7 +1,8 @@
 package goth
 
-templ viewComponent(id string, title string, style string, children []templ.Component) {
+templ viewComponent(id string, title string, style string, theme templ.Component, children []templ.Component) {
 	<section id={ id } style={ style } data-coreui-type="View">
+		@theme
 		if title != "" {
 			<header>
 				<h1>{ title }</h1>

@@ -27,6 +27,46 @@ func TestUnitToCSS(t *testing.T) {
 	}
 }
 
+func TestRenderWithThemeIncludesCSSVariablesAndTokenizedStyles(t *testing.T) {
+	component := RenderWithTheme(ast.Node{
+		Type: "View",
+		Attributes: map[string]ast.Value{
+			"id":    {Kind: ast.StringKind, Data: "root"},
+			"title": {Kind: ast.StringKind, Data: "Themed"},
+		},
+		Children: []*ast.Node{
+			{
+				Type: "Box",
+				Attributes: map[string]ast.Value{
+					"id":         {Kind: ast.StringKind, Data: "panel"},
+					"background": {Kind: ast.StringKind, Data: "surface"},
+					"style":      {Kind: ast.StringKind, Data: "color: primary"},
+				},
+			},
+		},
+	}, map[string]string{
+		"primary": "#0984e3",
+		"surface": "#1e1e1e",
+	})
+
+	var buf bytes.Buffer
+	if err := component.Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+
+	html := buf.String()
+	for _, want := range []string{
+		`--coreui-primary:#0984e3;`,
+		`--coreui-surface:#1e1e1e;`,
+		`background: var(--coreui-surface)`,
+		`color: var(--coreui-primary)`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("expected themed html to contain %q, got %s", want, html)
+		}
+	}
+}
+
 func TestRenderTriggerIncludesHTMXActionPayload(t *testing.T) {
 	component := Render(ast.Node{
 		Type: "Trigger",

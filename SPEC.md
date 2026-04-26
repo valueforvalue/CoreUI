@@ -1,7 +1,10 @@
 # CoreUI Technical Specification v1.0
 
 ## 1. BNF Grammar
-<program>    ::= <component>
+<program>    ::= [ <theme_block> ] <component>
+<theme_block> ::= "Theme" "(" <attr_list> ")" "{" <theme_entries> "}"
+<theme_entries> ::= <theme_entry> { [ "," ] <theme_entry> } | ""
+<theme_entry> ::= "Color" "(" <attr_list> ")"
 <component>  ::= <type> "(" <attr_list> ")" [ "{" <children> "}" ]
 <type>       ::= [A-Z][a-zA-Z0-9]*
 <attr_list>  ::= <attr> { "," <attr> } | ""
@@ -20,10 +23,12 @@
    * Note: CLI AI clients should handle escaping internal quotes automatically.
 
 ## 2. Component Registry
-Every component must support `id` (String - Mandatory), `hidden` (Bool), and `style` (String).
+UI components support `id` (String - Mandatory), `hidden` (Bool), and `style` (String). `Theme` is a top-level metadata block, and `Color` entries define thematic token pairs via `key` and `value`.
 
 | Component | Allowed Attributes |
 | :--- | :--- |
+| **Theme** | id |
+| **Color** | key (String - Mandatory), value (String - Mandatory) |
 | **View** | title, theme |
 | **Stack** | dir ("h"|"v"), gap (Unit), align |
 | **Grid** | cols (Array of Units), rows (Array of Units), gap (Unit) |
@@ -44,6 +49,7 @@ Interactivity follows the format: `namespace:action(key=value)`.
 The compiler must produce a JSON object with:
 1. `tree`: The nested component AST.
 2. `index`: A map of `id` to an object containing `path` and `type`.
-3. `metadata`: Compilation timestamp and compiler version.
+3. `theme`: A flat map of thematic tokens, where `key = Color.key` and `value = Color.value`.
+4. `metadata`: Compilation timestamp and compiler version.
 
-Action values are sub-parsed and emitted inline at `tree.attributes.action` rather than as a separate top-level collection.
+Action values are sub-parsed and emitted inline at `tree.attributes.action` rather than as a separate top-level collection. `Theme` is treated as a top-level metadata definition and is not included in the UI `tree`.

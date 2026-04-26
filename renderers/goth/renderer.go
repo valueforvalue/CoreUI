@@ -13,20 +13,26 @@ import (
 // To serve the result with net/http, call Render on the root node and render
 // the returned component inside your HTTP handler or page template.
 func Render(node ast.Node) templ.Component {
-	return renderNode(&node)
+	return RenderWithTheme(node, nil)
 }
 
-func renderNode(node *ast.Node) templ.Component {
+// RenderWithTheme converts a CoreUI AST node into a templ component tree and
+// injects CSS custom properties for the provided theme tokens.
+func RenderWithTheme(node ast.Node, theme map[string]string) templ.Component {
+	return renderNode(&node, theme)
+}
+
+func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 	if node == nil {
 		return templ.Raw("")
 	}
 
-	children := renderChildren(node.Children)
+	children := renderChildren(node.Children, theme)
 	id := node.ID()
 
 	switch node.Type {
 	case "View":
-		return viewComponent(id, stringAttribute(node, "title"), baseStyle(node), children)
+		return viewComponent(id, stringAttribute(node, "title"), baseStyle(node, theme), RenderTheme(theme), children)
 	case "Stack":
 		direction := "column"
 		if stringAttribute(node, "dir") == "h" {
@@ -44,7 +50,7 @@ func renderNode(node *ast.Node) templ.Component {
 			decls = append(decls, styleDeclFor("align-items", align))
 		}
 
-		return stackComponent(id, baseStyle(node, decls...), children)
+		return stackComponent(id, baseStyle(node, theme, decls...), children)
 	case "Grid":
 		decls := []styleDecl{
 			styleDeclFor("display", "grid"),
@@ -59,20 +65,20 @@ func renderNode(node *ast.Node) templ.Component {
 			decls = append(decls, styleDeclFor("gap", gap))
 		}
 
-		return gridComponent(id, baseStyle(node, decls...), children)
+		return gridComponent(id, baseStyle(node, theme, decls...), children)
 	case "Box":
 		decls := make([]styleDecl, 0, 3)
 		if padding := UnitToCSS(unitAttribute(node, "padding"), UnitContextLiteral); padding != "" {
 			decls = append(decls, styleDeclFor("padding", padding))
 		}
-		if background := sanitizeCSSValue(stringAttribute(node, "background")); background != "" {
+		if background := stringAttribute(node, "background"); background != "" {
 			decls = append(decls, styleDeclFor("background", background))
 		}
 		if border, ok := intAttribute(node, "border"); ok && border > 0 {
 			decls = append(decls, styleDeclFor("border", strconv.FormatInt(border, 10)+"px solid #d1d5db"))
 		}
 
-		return boxComponent(id, baseStyle(node, decls...), children)
+		return boxComponent(id, baseStyle(node, theme, decls...), children)
 	case "Text":
 		decls := make([]styleDecl, 0, 2)
 		if size := UnitToCSS(unitAttribute(node, "size"), UnitContextLiteral); size != "" {
@@ -82,7 +88,7 @@ func renderNode(node *ast.Node) templ.Component {
 			decls = append(decls, styleDeclFor("font-weight", weight))
 		}
 
-		return textComponent(id, stringAttribute(node, "value"), baseStyle(node, decls...))
+		return textComponent(id, stringAttribute(node, "value"), baseStyle(node, theme, decls...))
 	case "Input":
 		inputType := sanitizeHTMLToken(stringAttribute(node, "type"))
 		if inputType == "" {
@@ -93,7 +99,7 @@ func renderNode(node *ast.Node) templ.Component {
 			stringAttribute(node, "label"),
 			stringAttribute(node, "bind"),
 			inputType,
-			baseStyle(node),
+			baseStyle(node, theme),
 		)
 	case "Trigger":
 		action, _ := actionAttribute(node, "action")
@@ -103,29 +109,29 @@ func renderNode(node *ast.Node) templ.Component {
 			stringAttribute(node, "label"),
 			sanitizeHTMLToken(stringAttribute(node, "variant")),
 			payload,
-			baseStyle(node),
+			baseStyle(node, theme),
 		)
 	case "DataTable":
 		return dataTableComponent(
 			id,
 			stringAttribute(node, "source"),
 			boolAttribute(node, "selectable"),
-			baseStyle(node),
+			baseStyle(node, theme),
 			children,
 		)
 	default:
-		return unknownComponent(id, node.Type, baseStyle(node), children)
+		return unknownComponent(id, node.Type, baseStyle(node, theme), children)
 	}
 }
 
-func renderChildren(children []*ast.Node) []templ.Component {
+func renderChildren(children []*ast.Node, theme map[string]string) []templ.Component {
 	if len(children) == 0 {
 		return nil
 	}
 
 	components := make([]templ.Component, 0, len(children))
 	for _, child := range children {
-		components = append(components, renderNode(child))
+		components = append(components, renderNode(child, theme))
 	}
 	return components
 }

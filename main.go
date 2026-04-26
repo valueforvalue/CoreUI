@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	node, err := loadCompiledNode("kitchen_sink.json")
+	node, theme, err := loadCompiledNode("kitchen_sink.json")
 	if err != nil {
 		log.Fatalf("load compiled node: %v", err)
 	}
@@ -31,7 +31,7 @@ func main() {
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprint(w, "<!doctype html><html><head><meta charset=\"utf-8\"><title>CoreUI Kitchen Sink</title></head><body><main id=\"main-content\">")
-		if err := goth.Render(node).Render(r.Context(), w); err != nil {
+		if err := goth.RenderWithTheme(node, theme).Render(r.Context(), w); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -51,25 +51,25 @@ func main() {
 	}
 }
 
-func loadCompiledNode(path string) (ast.Node, error) {
+func loadCompiledNode(path string) (ast.Node, map[string]string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return ast.Node{}, err
+		return ast.Node{}, nil, err
 	}
 
 	var output generator.Output
 	if err := json.Unmarshal(data, &output); err != nil {
-		return ast.Node{}, err
+		return ast.Node{}, nil, err
 	}
 	if output.Tree == nil {
-		return ast.Node{}, fmt.Errorf("compiled tree missing")
+		return ast.Node{}, nil, fmt.Errorf("compiled tree missing")
 	}
 
 	node, err := inflateNode(output.Tree)
 	if err != nil {
-		return ast.Node{}, err
+		return ast.Node{}, nil, err
 	}
-	return *node, nil
+	return *node, output.Theme, nil
 }
 
 func inflateNode(source *generator.Node) (*ast.Node, error) {

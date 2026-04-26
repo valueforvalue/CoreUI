@@ -98,6 +98,17 @@ var componentSpecs = map[string]ComponentSpec{
 			"selectable": {Type: BoolType},
 		}),
 	},
+	"Theme": {
+		Name:       "Theme",
+		Attributes: mergeCommon(map[string]AttributeSpec{}),
+	},
+	"Color": {
+		Name: "Color",
+		Attributes: map[string]AttributeSpec{
+			"key":   {Type: StringType, Required: true},
+			"value": {Type: StringType, Required: true},
+		},
+	},
 }
 
 func mergeCommon(attributes map[string]AttributeSpec) map[string]AttributeSpec {
@@ -148,6 +159,15 @@ func RequiredAttributes(component string) []string {
 	}
 
 	return required
+}
+
+func RequiresID(component string) bool {
+	spec, ok := componentSpecs[component]
+	if !ok {
+		return false
+	}
+	attribute, ok := spec.Attributes["id"]
+	return ok && attribute.Required
 }
 
 func ValidateValue(component, attr string, value ast.Value) error {

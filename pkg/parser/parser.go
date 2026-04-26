@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -32,20 +33,49 @@ func New(source string) *Parser {
 }
 
 func (p *Parser) Parse() (*ast.Node, error) {
+	document, err := p.ParseDocument()
+	if err != nil {
+		return nil, err
+	}
+	return document.Tree, nil
+}
+
+func (p *Parser) ParseDocument() (*ast.Document, error) {
 	if p.current.Type == lexer.Illegal {
 		return nil, diag.New(p.current.Line, p.current.Col, p.current.Literal)
+	}
+
+	var theme map[string]string
+	if p.current.Type == lexer.Identifier && p.current.Literal == "Theme" {
+		themeNode, err := p.parseComponent()
+		if err != nil {
+			return nil, err
+		}
+		theme, err = p.extractTheme(themeNode)
+		if err != nil {
+			return nil, err
+		}
+		if p.current.Type == lexer.EOF {
+			return nil, diag.New(themeNode.Position.Line, themeNode.Position.Col, "missing root component")
+		}
 	}
 
 	node, err := p.parseComponent()
 	if err != nil {
 		return nil, err
 	}
+	if node.Type == "Theme" {
+		return nil, diag.New(node.Position.Line, node.Position.Col, "Theme must precede the root component")
+	}
 
 	if p.current.Type != lexer.EOF {
 		return nil, diag.Newf(p.current.Line, p.current.Col, "unexpected token %q", p.current.Literal)
 	}
 
-	return node, nil
+	return &ast.Document{
+		Tree:  node,
+		Theme: theme,
+	}, nil
 }
 
 func (p *Parser) parseComponent() (*ast.Node, error) {
@@ -96,7 +126,7 @@ func (p *Parser) parseComponent() (*ast.Node, error) {
 	if err := p.validateRequiredAttributes(componentType, attributes, componentToken.Line, componentToken.Col); err != nil {
 		return nil, err
 	}
-	if err := p.registerID(attributes["id"], componentToken.Line, componentToken.Col); err != nil {
+	if err := p.registerID(componentType, attributes["id"], componentToken.Line, componentToken.Col); err != nil {
 		return nil, err
 	}
 
@@ -119,7 +149,19 @@ func (p *Parser) parseComponent() (*ast.Node, error) {
 			if err != nil {
 				return nil, err
 			}
+			if componentType == "Theme" && child.Type != "Color" {
+				return nil, diag.New(child.Position.Line, child.Position.Col, "Theme only accepts Color children")
+			}
+			if componentType != "Theme" && child.Type == "Color" {
+				return nil, diag.New(child.Position.Line, child.Position.Col, "Color must be inside Theme")
+			}
+			if componentType != "Theme" && child.Type == "Theme" {
+				return nil, diag.New(child.Position.Line, child.Position.Col, "Theme must be top-level")
+			}
 			node.Children = append(node.Children, child)
+			if p.current.Type == lexer.Comma {
+				p.advance()
+			}
 		}
 		p.advance()
 	}
@@ -311,13 +353,19 @@ func (p *Parser) parseArray() (ast.Value, error) {
 func (p *Parser) validateRequiredAttributes(component string, attributes map[string]ast.Value, line, col int) error {
 	for _, key := range registry.RequiredAttributes(component) {
 		if _, ok := attributes[key]; !ok {
-			return diag.New(line, col, "Duplicate/Missing ID")
+			if key == "id" {
+				return diag.New(line, col, "Duplicate/Missing ID")
+			}
+			return diag.Newf(line, col, "missing required attribute %q on %s", key, component)
 		}
 	}
 	return nil
 }
 
-func (p *Parser) registerID(value ast.Value, line, col int) error {
+func (p *Parser) registerID(component string, value ast.Value, line, col int) error {
+	if !registry.RequiresID(component) {
+		return nil
+	}
 	id, ok := value.Data.(string)
 	if !ok || id == "" {
 		return diag.New(line, col, "Duplicate/Missing ID")
@@ -327,6 +375,36 @@ func (p *Parser) registerID(value ast.Value, line, col int) error {
 	}
 	p.ids[id] = true
 	return nil
+}
+
+func (p *Parser) extractTheme(node *ast.Node) (map[string]string, error) {
+	if node == nil || node.Type != "Theme" {
+		return nil, fmt.Errorf("theme extraction requires Theme node")
+	}
+
+	theme := make(map[string]string, len(node.Children))
+	for _, child := range node.Children {
+		if child.Type != "Color" {
+			return nil, diag.New(child.Position.Line, child.Position.Col, "Theme only accepts Color children")
+		}
+		if len(child.Children) > 0 {
+			return nil, diag.New(child.Position.Line, child.Position.Col, "Color cannot contain children")
+		}
+
+		key := p.stringValue(child.Attributes["key"])
+		value := p.stringValue(child.Attributes["value"])
+		if _, exists := theme[key]; exists {
+			return nil, diag.Newf(child.Position.Line, child.Position.Col, "duplicate theme key %q", key)
+		}
+		theme[key] = value
+	}
+
+	return theme, nil
+}
+
+func (p *Parser) stringValue(value ast.Value) string {
+	text, _ := value.Data.(string)
+	return text
 }
 
 func (p *Parser) expect(expected lexer.TokenType, message string) (lexer.Token, error) {

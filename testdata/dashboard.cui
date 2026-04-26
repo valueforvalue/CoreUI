@@ -1,3 +1,9 @@
+Theme(id="dark") {
+  Color(key="primary", value="#0984e3"),
+  Color(key="surface", value="#1e1e1e"),
+  Color(key="panel", value="#2d3436")
+}
+
 View(id="app", title="Ops Console", theme="dark") {
   Stack(id="layout", dir="v", gap=16px) {
     Text(id="header", value="Operations", size=24px, weight="bold")

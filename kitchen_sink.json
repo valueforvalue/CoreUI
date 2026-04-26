@@ -28,6 +28,7 @@
                 "id": "page_title",
                 "attributes": {
                   "size": "28px",
+                  "style": "color: primary",
                   "value": "Operations Dashboard",
                   "weight": "bold"
                 }
@@ -64,7 +65,7 @@
                 "type": "Box",
                 "id": "primary_panel",
                 "attributes": {
-                  "background": "#f5f5f5",
+                  "background": "surface",
                   "padding": "20px"
                 },
                 "children": [
@@ -98,6 +99,7 @@
                         "type": "Text",
                         "id": "helper_text",
                         "attributes": {
+                          "style": "color: primary",
                           "value": "Use the filters in the sidebar to narrow the data."
                         }
                       }
@@ -109,7 +111,7 @@
                 "type": "Box",
                 "id": "sidebar_panel",
                 "attributes": {
-                  "background": "#e5e7eb",
+                  "background": "sidebar",
                   "padding": "20px"
                 },
                 "children": [
@@ -216,8 +218,14 @@
       "type": "Stack"
     }
   },
+  "theme": {
+    "panel": "#2d3436",
+    "primary": "#0984e3",
+    "sidebar": "#dfe6e9",
+    "surface": "#1e1e1e"
+  },
   "metadata": {
-    "compiled_at": "2026-04-26T04:22:46Z",
+    "compiled_at": "2026-04-26T04:34:33Z",
     "version": "dev"
   }
 }

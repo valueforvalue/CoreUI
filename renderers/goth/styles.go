@@ -1,10 +1,13 @@
 package goth
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 	"unicode"
 
 	"coreui/pkg/ast"
+	"github.com/a-h/templ"
 )
 
 // UnitContext controls how fractional CoreUI units are translated to CSS.
@@ -61,18 +64,18 @@ func UnitToCSS(unit string, context UnitContext) string {
 	}
 }
 
-func baseStyle(node *ast.Node, decls ...styleDecl) string {
+func baseStyle(node *ast.Node, theme map[string]string, decls ...styleDecl) string {
 	merged := make([]string, 0, len(decls)+1)
 
 	if boolAttribute(node, "hidden") {
 		merged = append(merged, "display: none")
 	}
 	for _, decl := range decls {
-		if sanitized := sanitizeDeclaration(decl.property, decl.value); sanitized != "" {
+		if sanitized := sanitizeDeclaration(decl.property, decl.value, theme); sanitized != "" {
 			merged = append(merged, sanitized)
 		}
 	}
-	merged = append(merged, sanitizeInlineStyle(stringAttribute(node, "style"))...)
+	merged = append(merged, sanitizeInlineStyle(stringAttribute(node, "style"), theme)...)
 
 	return strings.Join(merged, "; ")
 }
@@ -81,7 +84,7 @@ func styleDeclFor(property, value string) styleDecl {
 	return styleDecl{property: property, value: value}
 }
 
-func sanitizeInlineStyle(raw string) []string {
+func sanitizeInlineStyle(raw string, theme map[string]string) []string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return nil
@@ -100,20 +103,46 @@ func sanitizeInlineStyle(raw string) []string {
 		}
 		property := strings.TrimSpace(part[:index])
 		value := strings.TrimSpace(part[index+1:])
-		if sanitized := sanitizeDeclaration(property, value); sanitized != "" {
+		if sanitized := sanitizeDeclaration(property, value, theme); sanitized != "" {
 			out = append(out, sanitized)
 		}
 	}
 	return out
 }
 
-func sanitizeDeclaration(property, value string) string {
+func sanitizeDeclaration(property, value string, theme map[string]string) string {
 	property = sanitizeCSSProperty(property)
-	value = sanitizeCSSValue(value)
+	value = sanitizeStyleValue(property, value, theme)
 	if property == "" || value == "" {
 		return ""
 	}
 	return property + ": " + value
+}
+
+// RenderTheme renders CSS custom properties for a compiled CoreUI theme.
+func RenderTheme(theme map[string]string) templ.Component {
+	if len(theme) == 0 {
+		return templ.Raw("")
+	}
+
+	keys := make([]string, 0, len(theme))
+	for key := range theme {
+		if sanitizeThemeKey(key) != "" && sanitizeCSSValue(theme[key]) != "" {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	if len(keys) == 0 {
+		return templ.Raw("")
+	}
+
+	var builder strings.Builder
+	builder.WriteString("<style>:root{")
+	for _, key := range keys {
+		builder.WriteString(fmt.Sprintf("--coreui-%s:%s;", sanitizeThemeKey(key), sanitizeCSSValue(theme[key])))
+	}
+	builder.WriteString("}</style>")
+	return templ.Raw(builder.String())
 }
 
 func sanitizeCSSProperty(property string) string {
@@ -145,6 +174,15 @@ func sanitizeCSSValue(value string) string {
 	return value
 }
 
+func sanitizeStyleValue(property, value string, theme map[string]string) string {
+	if isColorProperty(property) {
+		if token := resolveThemeToken(value, theme); token != "" {
+			return token
+		}
+	}
+	return sanitizeCSSValue(value)
+}
+
 func sanitizeCSSToken(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -169,6 +207,30 @@ func sanitizeHTMLToken(value string) string {
 		}
 	}
 	return value
+}
+
+func sanitizeThemeKey(value string) string {
+	return sanitizeCSSToken(value)
+}
+
+func resolveThemeToken(value string, theme map[string]string) string {
+	key := sanitizeThemeKey(value)
+	if key == "" {
+		return ""
+	}
+	if _, ok := theme[key]; ok {
+		return "var(--coreui-" + key + ")"
+	}
+	return ""
+}
+
+func isColorProperty(property string) bool {
+	switch property {
+	case "background", "background-color", "color", "border-color", "fill", "stroke":
+		return true
+	default:
+		return false
+	}
 }
 
 func isNumericToken(value string) bool {
