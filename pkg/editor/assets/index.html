@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>corec edit</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #1e1e2e;
+      --surface:    #181825;
+      --panel:      #313244;
+      --border:     #45475a;
+      --text:       #cdd6f4;
+      --text-dim:   #6c7086;
+      --accent:     #89b4fa;
+      --error:      #f38ba8;
+      --success:    #a6e3a1;
+      --warning:    #fab387;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      overflow: hidden;
+    }
+
+    #app {
+      display: grid;
+      grid-template-rows: 40px 1fr 28px;
+      height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────── */
+    #header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    #header .logo   { font-weight: 700; color: var(--accent); letter-spacing: 0.03em; }
+    #header .sep    { color: var(--border); }
+    #header .fname  { color: var(--text); flex: 1; font-family: monospace; font-size: 12px; }
+    #save-status    { font-size: 11px; color: var(--text-dim); }
+    #header button  {
+      padding: 4px 14px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      transition: background .1s;
+    }
+    #header button:hover             { background: var(--border); }
+    #header button.primary           { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    #header button.primary:hover     { opacity: .85; }
+
+    /* ── Main three-panel layout ─────────────────── */
+    #main {
+      display: grid;
+      grid-template-columns: 220px 1fr 1fr;
+      overflow: hidden;
+    }
+
+    /* ── Left sidebar / palette ──────────────────── */
+    #sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .sidebar-heading {
+      padding: 10px 12px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    #palette-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .comp-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background .1s;
+    }
+    .comp-item:hover              { background: var(--panel); border-color: var(--border); }
+    .comp-item.selected           { background: var(--panel); border-color: var(--accent); }
+    .comp-icon {
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      background: var(--accent);
+      color: var(--bg);
+      font-size: 10px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      opacity: .8;
+    }
+    .comp-name       { flex: 1; font-size: 12px; font-weight: 500; }
+    .comp-children   { font-size: 9px; color: var(--text-dim); }
+    .insert-btn      {
+      padding: 2px 8px; font-size: 10px;
+      border: 1px solid var(--border); border-radius: 3px;
+      background: transparent; color: var(--text-dim); cursor: pointer;
+      display: none; white-space: nowrap;
+    }
+    .comp-item:hover .insert-btn  { display: block; }
+    .insert-btn:hover             { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+    /* ── Attribute editor panel (bottom of sidebar) ─ */
+    #attr-panel {
+      border-top: 1px solid var(--border);
+      display: none;
+      flex-direction: column;
+      max-height: 260px;
+      flex-shrink: 0;
+    }
+    #attr-panel-head {
+      display: flex; align-items: center;
+      padding: 6px 10px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #attr-panel-title { flex: 1; font-size: 11px; font-weight: 600; color: var(--accent); }
+    #attr-close { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 14px; line-height: 1; }
+    #attr-close:hover { color: var(--text); }
+    #attr-fields {
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .attr-row { display: flex; align-items: center; gap: 6px; }
+    .attr-label {
+      width: 72px; font-size: 10px; color: var(--text-dim);
+      flex-shrink: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
+    }
+    .attr-label.req { color: var(--warning); }
+    .attr-ctrl {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      padding: 3px 6px;
+      font-size: 11px;
+      font-family: monospace;
+      min-width: 0;
+    }
+    .attr-ctrl:focus  { outline: none; border-color: var(--accent); }
+    select.attr-ctrl  { background: var(--bg); }
+    input[type=checkbox].attr-ctrl { width: auto; flex: none; }
+
+    /* ── Code editor panel ───────────────────────── */
+    #editor-panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+    #code-editor {
+      flex: 1;
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 14px 16px;
+      font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      tab-size: 4;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow-x: auto;
+    }
+
+    /* ── Preview panel ───────────────────────────── */
+    #preview-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #preview-frame {
+      flex: 1;
+      border: none;
+      background: #ffffff;
+    }
+    #error-display {
+      padding: 10px 14px;
+      background: #2d1322;
+      color: var(--error);
+      font-family: monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      max-height: 130px;
+      display: none;
+      border-top: 1px solid #6b1f35;
+      flex-shrink: 0;
+    }
+
+    /* ── Status bar ──────────────────────────────── */
+    #status-bar {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 0 14px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    #status-bar.ok    { background: #1e3a2b; color: var(--success); }
+    #status-bar.error { background: #3a1e22; color: var(--error); }
+    #status-indicator { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 4px; }
+    #cursor-pos { margin-left: auto; }
+
+    /* ── Scrollbar styling ───────────────────────── */
+    ::-webkit-scrollbar            { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track      { background: var(--surface); }
+    ::-webkit-scrollbar-thumb      { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover{ background: var(--text-dim); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ─────────────────────────────────────── -->
+  <header id="header">
+    <span class="logo">✦ corec edit</span>
+    <span class="sep">│</span>
+    <span id="fname" class="fname">loading…</span>
+    <span id="save-status"></span>
+    <button id="save-btn" class="primary">Save</button>
+  </header>
+
+  <!-- ── Three-panel main area ──────────────────────── -->
+  <div id="main">
+
+    <!-- Left: component palette + attribute editor -->
+    <aside id="sidebar">
+      <div class="sidebar-heading">Components</div>
+      <div id="palette-list"></div>
+
+      <!-- Attribute editor (registry-driven, shown on component selection) -->
+      <div id="attr-panel">
+        <div id="attr-panel-head">
+          <span id="attr-panel-title">Attributes</span>
+          <button id="attr-close" title="Close">✕</button>
+        </div>
+        <div id="attr-fields"></div>
+      </div>
+    </aside>
+
+    <!-- Middle: code editor -->
+    <div id="editor-panel">
+      <div class="sidebar-heading" style="border-right:none;">Source</div>
+      <textarea id="code-editor"
+        spellcheck="false"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"></textarea>
+    </div>
+
+    <!-- Right: live preview -->
+    <div id="preview-panel">
+      <div class="sidebar-heading" style="border-right:none;">Preview</div>
+      <iframe id="preview-frame" title="CoreUI live preview"></iframe>
+      <div id="error-display"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Status bar ─────────────────────────────────── -->
+  <div id="status-bar">
+    <span><span id="status-indicator"></span><span id="status-msg">Loading…</span></span>
+    <span id="cursor-pos">Ln 1, Col 1</span>
+  </div>
+
+</div><!-- #app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════════
+let registryData   = [];   // ComponentInfo[]
+let isDirty        = false;
+let compileTimer   = null;
+let autoSaveTimer  = null;
+let selectedComp   = null; // currently displayed in attr panel
+
+const $  = id => document.getElementById(id);
+const ed = $('code-editor');
+
+// ═══════════════════════════════════════════════════════════════════
+// Bootstrap
+// ═══════════════════════════════════════════════════════════════════
+async function init() {
+  try {
+    const [metaRes, regRes, srcRes] = await Promise.all([
+      fetch('/api/meta'),
+      fetch('/api/registry'),
+      fetch('/api/source'),
+    ]);
+
+    const meta = await metaRes.json();
+    $('fname').textContent = meta.file;
+    document.title = 'corec edit — ' + meta.file;
+
+    registryData = await regRes.json();
+    buildPalette();
+
+    ed.value = await srcRes.text();
+    setStatus('ok', 'Ready');
+    scheduleCompile(0);
+  } catch (err) {
+    setStatus('error', 'Init failed: ' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Component palette  (registry-first)
+// ═══════════════════════════════════════════════════════════════════
+function buildPalette() {
+  const list = $('palette-list');
+  list.innerHTML = '';
+
+  for (const comp of registryData) {
+    // Color is always a child of Theme – skip as top-level entry
+    if (comp.name === 'Color') continue;
+
+    const item = document.createElement('div');
+    item.className = 'comp-item';
+    item.dataset.name = comp.name;
+
+    const icon = document.createElement('div');
+    icon.className = 'comp-icon';
+    icon.textContent = comp.name[0];
+
+    const name = document.createElement('span');
+    name.className = 'comp-name';
+    name.textContent = comp.name;
+
+    const badge = document.createElement('span');
+    badge.className = 'comp-children';
+    badge.textContent = comp.hasChildren ? '{ }' : '';
+
+    const btn = document.createElement('button');
+    btn.className = 'insert-btn';
+    btn.textContent = '+ Insert';
+    btn.addEventListener('click', e => { e.stopPropagation(); insertSnippet(comp); });
+
+    item.appendChild(icon);
+    item.appendChild(name);
+    item.appendChild(badge);
+    item.appendChild(btn);
+
+    item.addEventListener('click', () => showAttrPanel(comp, item));
+
+    list.appendChild(item);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Attribute editor panel  (registry-first UI controls)
+// ═══════════════════════════════════════════════════════════════════
+function showAttrPanel(comp, itemEl) {
+  // Deselect previous
+  document.querySelectorAll('.comp-item.selected')
+    .forEach(el => el.classList.remove('selected'));
+  if (itemEl) itemEl.classList.add('selected');
+
+  selectedComp = comp;
+  $('attr-panel-title').textContent = comp.name;
+  $('attr-panel').style.display = 'flex';
+
+  const fields = $('attr-fields');
+  fields.innerHTML = '';
+
+  for (const attr of comp.attributes) {
+    const row = document.createElement('div');
+    row.className = 'attr-row';
+
+    const label = document.createElement('label');
+    label.className = 'attr-label' + (attr.required ? ' req' : '');
+    label.textContent = attr.name + (attr.required ? ' *' : '');
+    label.title = attr.type + (attr.required ? ' (required)' : '');
+
+    let ctrl;
+
+    if (attr.enum && attr.enum.length > 0) {
+      // Enum → <select>
+      ctrl = document.createElement('select');
+      ctrl.className = 'attr-ctrl';
+      const blank = new Option('—', '');
+      ctrl.appendChild(blank);
+      attr.enum.forEach(v => ctrl.appendChild(new Option(v, v)));
+    } else if (attr.type === 'bool') {
+      ctrl = document.createElement('input');
+      ctrl.type = 'checkbox';
+      ctrl.className = 'attr-ctrl';
+    } else if (attr.type === 'int') {
+      ctrl = document.createElement('input');
+      ctrl.type = 'number';
+      ctrl.step = '1';
+      ctrl.className = 'attr-ctrl';
+    } else {
+      ctrl = document.createElement('input');
+      ctrl.type = 'text';
+      ctrl.className = 'attr-ctrl';
+      ctrl.placeholder = placeholderFor(attr);
+    }
+
+    label.htmlFor = 'attr-' + attr.name;
+    ctrl.id = 'attr-' + attr.name;
+
+    row.appendChild(label);
+    row.appendChild(ctrl);
+    fields.appendChild(row);
+  }
+}
+
+function placeholderFor(attr) {
+  switch (attr.type) {
+    case 'unit':                      return '20px  50%  1*';
+    case 'unit_array':                return '[1*, 200px]';
+    case 'string_array':              return '["a", "b"]';
+    case 'number_array_or_reference': return '[18,24] or app:ref';
+    case 'action':                    return 'app:notify(msg="Hi")';
+    default:                          return '';
+  }
+}
+
+$('attr-close').addEventListener('click', () => {
+  $('attr-panel').style.display = 'none';
+  document.querySelectorAll('.comp-item.selected')
+    .forEach(el => el.classList.remove('selected'));
+  selectedComp = null;
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Snippet insertion
+// ═══════════════════════════════════════════════════════════════════
+function insertSnippet(comp) {
+  const snippet = buildSnippet(comp);
+  const start   = ed.selectionStart;
+  const before  = ed.value.slice(0, start);
+  const after   = ed.value.slice(ed.selectionEnd);
+  const prefix  = before.length > 0 && !before.endsWith('\n') ? '\n' : '';
+  const insert  = prefix + snippet + '\n';
+
+  ed.value = before + insert + after;
+  ed.selectionStart = ed.selectionEnd = start + insert.length;
+  ed.focus();
+  markDirty();
+  scheduleCompile(400);
+}
+
+function buildSnippet(comp) {
+  // Use attribute values from the attr-panel if it is open for this component,
+  // otherwise fall back to sensible defaults.
+  const attrs = ['id="' + comp.name.toLowerCase() + '_1"'];
+
+  for (const attr of comp.attributes) {
+    if (attr.name === 'id') continue;
+
+    let val = '';
+    if (selectedComp && selectedComp.name === comp.name) {
+      const ctrl = document.getElementById('attr-' + attr.name);
+      if (ctrl) {
+        val = ctrl.type === 'checkbox' ? (ctrl.checked ? 'true' : '') : ctrl.value.trim();
+      }
+    }
+
+    if (!val && !attr.required) continue;   // skip optional empties
+    if (!val) val = defaultValue(attr);
+    attrs.push(attr.name + '=' + val);
+  }
+
+  if (comp.hasChildren) {
+    return comp.name + '(' + attrs.join(', ') + ') {\n    \n}';
+  }
+  return comp.name + '(' + attrs.join(', ') + ')';
+}
+
+function defaultValue(attr) {
+  if (attr.enum && attr.enum.length > 0) return '"' + attr.enum[0] + '"';
+  switch (attr.type) {
+    case 'string':                    return '"value"';
+    case 'bool':                      return 'true';
+    case 'int':                       return '0';
+    case 'unit':                      return '20px';
+    case 'unit_array':                return '[1*, 1*]';
+    case 'string_array':              return '["a", "b"]';
+    case 'number_array_or_reference': return '[0, 1]';
+    case 'action':                    return '"app:action()"';
+    default:                          return '"value"';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Code editor events
+// ═══════════════════════════════════════════════════════════════════
+ed.addEventListener('input', () => {
+  markDirty();
+  scheduleCompile(500);
+  scheduleAutoSave(2500);
+});
+
+ed.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveNow();
+    return;
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = ed.selectionStart, end = ed.selectionEnd;
+    ed.value = ed.value.slice(0, s) + '    ' + ed.value.slice(end);
+    ed.selectionStart = ed.selectionEnd = s + 4;
+  }
+});
+
+ed.addEventListener('keyup',   updateCursor);
+ed.addEventListener('click',   updateCursor);
+ed.addEventListener('selectionchange', updateCursor);
+
+function updateCursor() {
+  const pos   = ed.selectionStart;
+  const lines = ed.value.slice(0, pos).split('\n');
+  $('cursor-pos').textContent = 'Ln ' + lines.length + ', Col ' + (lines[lines.length - 1].length + 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Compilation and live preview
+// ═══════════════════════════════════════════════════════════════════
+function scheduleCompile(ms) {
+  clearTimeout(compileTimer);
+  compileTimer = setTimeout(compileAndPreview, ms);
+}
+
+async function compileAndPreview() {
+  const source = ed.value;
+  try {
+    const res = await fetch('/api/preview', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ Source: source }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: res.statusText }));
+      showError(body.error || 'Compile error');
+      setStatus('error', 'Compile error');
+      return;
+    }
+
+    const html = await res.text();
+    hideError();
+    $('preview-frame').srcdoc = html;
+    setStatus('ok', 'OK');
+  } catch (err) {
+    showError(err.message);
+    setStatus('error', 'Network error');
+  }
+}
+
+function showError(msg) {
+  const el = $('error-display');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  $('error-display').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Save
+// ═══════════════════════════════════════════════════════════════════
+function scheduleAutoSave(ms) {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => { if (isDirty) saveNow(); }, ms);
+}
+
+async function saveNow() {
+  try {
+    const res = await fetch('/api/source', {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ Source: ed.value }),
+    });
+    if (res.ok) {
+      isDirty = false;
+      setSaveStatus(false);
+    } else {
+      setSaveStatus(true, true);
+    }
+  } catch (_) {
+    setSaveStatus(true, true);
+  }
+}
+
+$('save-btn').addEventListener('click', saveNow);
+
+function markDirty() {
+  isDirty = true;
+  setSaveStatus(true);
+}
+
+function setSaveStatus(dirty, failed) {
+  const el = $('save-status');
+  if (failed) {
+    el.textContent = '⚠ Save failed';
+    el.style.color = 'var(--error)';
+  } else if (dirty) {
+    el.textContent = '● Unsaved';
+    el.style.color = 'var(--warning)';
+  } else {
+    const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    el.textContent = '✓ Saved ' + t;
+    el.style.color = 'var(--success)';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Status bar
+// ═══════════════════════════════════════════════════════════════════
+function setStatus(state, msg) {
+  const bar = $('status-bar');
+  bar.className = state;
+  $('status-msg').textContent = msg;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Start
+// ═══════════════════════════════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
