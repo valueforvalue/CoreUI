@@ -1,0 +1,83 @@
+{
+  "tree": {
+    "type": "View",
+    "id": "graph_view",
+    "attributes": {
+      "theme": "Modern",
+      "title": "Graph Fixture"
+    },
+    "children": [
+      {
+        "type": "Stack",
+        "id": "graph_stack",
+        "attributes": {
+          "dir": "v",
+          "gap": "16px"
+        },
+        "children": [
+          {
+            "type": "Text",
+            "id": "graph_title",
+            "attributes": {
+              "size": "20px",
+              "value": "Synthetic Throughput",
+              "weight": "bold"
+            }
+          },
+          {
+            "type": "Graph",
+            "id": "fixture_graph",
+            "attributes": {
+              "color": "primary",
+              "data": [
+                14,
+                19,
+                23
+              ],
+              "height": "220px",
+              "labels": [
+                "Batch A",
+                "Batch B",
+                "Batch C"
+              ],
+              "type": "bar"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "index": {
+    "fixture_graph": {
+      "path": "/tree/children/0/children/1",
+      "type": "Graph"
+    },
+    "graph_stack": {
+      "path": "/tree/children/0",
+      "type": "Stack"
+    },
+    "graph_title": {
+      "path": "/tree/children/0/children/0",
+      "type": "Text"
+    },
+    "graph_view": {
+      "path": "/tree",
+      "type": "View"
+    }
+  },
+  "theme": {
+    "background": "#f8fafc",
+    "panel": "#ffffff",
+    "primary": "#6366f1",
+    "radius": "md",
+    "shadow": "soft",
+    "speed": "smooth",
+    "surface": "#ffffff",
+    "text": "#0f172a"
+  },
+  "metadata": {
+    "compiled_at": "2026-01-01T00:00:00Z",
+    "version": "test",
+    "registry_version": "1.3.0"
+  }
+}

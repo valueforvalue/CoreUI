@@ -15,9 +15,10 @@ type AttributeDoc struct {
 }
 
 type ComponentDoc struct {
-	Name        string
-	HasChildren bool
-	Attributes  []AttributeDoc
+	Name          string
+	HasChildren   bool
+	Attributes    []AttributeDoc
+	BestPractices string
 }
 
 type CatalogData struct {
@@ -37,6 +38,7 @@ type ContextData struct {
 	GoWiringSnippet     string
 	JSWiringSnippet     string
 	ActionProtocolIntro string
+	GraphGuidance       string
 }
 
 type SemanticTokenDoc struct {
@@ -77,6 +79,13 @@ CoreUI action values use the form ` + "`namespace:function(key=\"value\")`" + `.
 {{ range .Attributes }}| {{ .Name }} | {{ .Type }} | {{ .Requirement }} |
 {{ end }}
 
+{{ if .BestPractices -}}
+### Best Practices
+
+{{ .BestPractices }}
+
+{{ end -}}
+
 {{ end }}
 `
 
@@ -103,6 +112,10 @@ const contextTemplate = `# CoreUI Context Stream
 {{ end }}
 
 {{ end }}
+## BI & Visualization Guidance
+
+{{ .GraphGuidance }}
+
 ## Theme Tokens
 
 These are the standard starter tokens used by CoreUI onboarding templates:
@@ -189,6 +202,43 @@ ui.render(document.getElementById("coreui-root"));`
 
 const actionProtocolIntro = "`ui:` is reserved for registry-validated CoreUI primitives. `app:` is open for application intent, but must still follow valid CoreUI action syntax and emit the same `{ namespace, call, params }` structure."
 
+const graphBestPractices = `Use ` + "`labels`" + ` and ` + "`data`" + ` as parallel arrays with the same length so each label maps to the value at the same index.
+
+- Prefer a quoted app reference such as ` + "`data=\"app:simulation.pressure_series\"`" + ` when live data comes from your application layer.
+- Use ` + "`type=\"line\"`" + ` or ` + "`type=\"area\"`" + ` for time series, ` + "`type=\"bar\"`" + ` for ranked comparisons, and ` + "`type=\"pie\"`" + ` only for small part-to-whole slices.
+- Keep ` + "`height`" + ` unit-backed (for example ` + "`220px`" + ` or ` + "`40%`" + `) so the compiler can reject invalid units before rendering.
+
+~~~cui
+Graph(
+    id="throughput_graph",
+    type="line",
+    color="primary",
+    height=240px,
+    labels=["08:00", "10:00", "12:00", "14:00"],
+    data=[18, 24, 21, 29]
+)
+~~~`
+
+const graphGuidance = `The ` + "`Graph`" + ` component is the BI and visualization primitive for CoreUI.
+
+- ` + "`labels`" + ` is a string array for axis or legend text.
+- ` + "`data`" + ` is either a literal numeric JSON array or a quoted ` + "`app:`" + ` reference string when your simulation data is resolved at runtime.
+- Keep ` + "`labels`" + ` and literal ` + "`data`" + ` arrays aligned by index: the first label describes the first value, the second label describes the second value, and so on.
+- When emitting runtime references, prefer stable names such as ` + "`app:simulation.temperature_series`" + ` or ` + "`app:ops.queue_depth`" + ` so downstream agents can map data producers to Graph nodes deterministically.
+
+Example:
+
+~~~cui
+Graph(
+    id="temperature_graph",
+    type="area",
+    color="primary",
+    height=240px,
+    labels=["T+0", "T+5", "T+10", "T+15"],
+    data="app:simulation.temperature_series"
+)
+~~~`
+
 func BuildCatalog() CatalogData {
 	components := registry.AllComponents()
 	data := CatalogData{
@@ -220,11 +270,12 @@ func BuildCatalog() CatalogData {
 
 			doc.Attributes = append(doc.Attributes, AttributeDoc{
 				Name:        name,
-				Type:        formatType(attribute.Type),
+				Type:        docType(attribute),
 				Requirement: requirement,
 			})
 		}
 
+		doc.BestPractices = componentBestPractices(component.Name)
 		data.Components = append(data.Components, doc)
 	}
 
@@ -246,6 +297,7 @@ func RenderContext(architecture string) (string, error) {
 		GoWiringSnippet:     goWiringSnippet,
 		JSWiringSnippet:     jsWiringSnippet,
 		ActionProtocolIntro: actionProtocolIntro,
+		GraphGuidance:       graphGuidance,
 	})
 }
 
@@ -280,6 +332,13 @@ func formatType(valueType registry.ValueType) string {
 		parts[i] = strings.ToUpper(part[:1]) + part[1:]
 	}
 	return strings.Join(parts, " ")
+}
+
+func docType(attribute registry.AttributeSpec) string {
+	if attribute.DocType != "" {
+		return attribute.DocType
+	}
+	return formatType(attribute.Type)
 }
 
 func sortStrings(values []string) {
@@ -333,4 +392,13 @@ func buildFactoryThemes() []FactoryThemeDoc {
 		out = append(out, doc)
 	}
 	return out
+}
+
+func componentBestPractices(name string) string {
+	switch name {
+	case "Graph":
+		return graphBestPractices
+	default:
+		return ""
+	}
 }

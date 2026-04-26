@@ -144,6 +144,9 @@ section, div, span, button, input, img, table, caption, tbody, tr, td, th {
       case "DataTable":
         element = this.createDataTable(attrs);
         break;
+      case "Graph":
+        element = this.createGraph(attrs);
+        break;
       default:
         return this.createErrorBoundary(`Unknown CoreUI component: ${String(type)}`);
     }
@@ -258,6 +261,69 @@ section, div, span, button, input, img, table, caption, tbody, tr, td, th {
     return wrapper;
   }
 
+  createGraph(attrs) {
+    const figure = document.createElement("figure");
+    figure.style.margin = "0";
+    figure.style.display = "flex";
+    figure.style.flexDirection = "column";
+    figure.style.gap = "0.75rem";
+
+    const model = this.graphModel(attrs);
+    const svg = this.createSvgElement("svg");
+    svg.setAttribute("viewBox", "0 0 640 240");
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", this.graphHeightValue(attrs.height));
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", `${model.type} graph`);
+    svg.style.display = "block";
+    svg.style.overflow = "visible";
+
+    if (model.reference) {
+      this.renderGraphPlaceholder(svg, `Awaiting ${model.reference}`);
+    } else if (model.values.length === 0) {
+      this.renderGraphPlaceholder(svg, "No graph data");
+    } else {
+      switch (model.type) {
+        case "bar":
+          this.renderBarGraph(svg, model);
+          break;
+        case "area":
+          this.renderAreaGraph(svg, model);
+          break;
+        case "pie":
+          this.renderPieGraph(svg, model);
+          break;
+        default:
+          this.renderLineGraph(svg, model);
+          break;
+      }
+    }
+
+    figure.appendChild(svg);
+
+    if (model.labels.length > 0 && model.values.length > 0) {
+      const legend = document.createElement("figcaption");
+      legend.style.display = "flex";
+      legend.style.flexWrap = "wrap";
+      legend.style.gap = "0.5rem";
+      legend.style.fontSize = "0.875rem";
+      legend.style.color = this.resolveThemeToken("text") || "inherit";
+
+      model.values.forEach((value, index) => {
+        const chip = document.createElement("span");
+        chip.textContent = `${model.labels[index]}: ${this.formatGraphNumber(value)}`;
+        chip.style.padding = "0.25rem 0.5rem";
+        chip.style.border = "1px solid rgba(148, 163, 184, 0.35)";
+        chip.style.borderRadius = "9999px";
+        legend.appendChild(chip);
+      });
+
+      figure.appendChild(legend);
+    }
+
+    return figure;
+  }
+
   decorateElement(element, node) {
     const id = this.asString(node.id);
     if (id) {
@@ -305,6 +371,9 @@ section, div, span, button, input, img, table, caption, tbody, tr, td, th {
       case "Trigger":
         this.applySemanticStyles(element, { interactive: true, elevated: true });
         this.applyVariantStyles(element, attrs.variant);
+        break;
+      case "Graph":
+        element.style.width = "100%";
         break;
       default:
         break;
@@ -556,6 +625,387 @@ section, div, span, button, input, img, table, caption, tbody, tr, td, th {
     error.dataset.coreuiError = "true";
     error.textContent = message;
     return error;
+  }
+
+  graphModel(attrs) {
+    const values = this.graphValues(attrs.data);
+    const labels = this.graphLabels(attrs.labels, values.length);
+    return {
+      type: this.graphType(attrs.type),
+      values,
+      labels,
+      color: this.graphColorValue(attrs.color),
+      radius: this.graphRadiusValue(),
+      reference:
+        typeof attrs.data === "string" && attrs.data.trim().startsWith("app:")
+          ? attrs.data.trim()
+          : "",
+    };
+  }
+
+  graphType(value) {
+    const type = this.asString(value).trim();
+    switch (type) {
+      case "bar":
+      case "area":
+      case "pie":
+        return type;
+      default:
+        return "line";
+    }
+  }
+
+  graphValues(value) {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => {
+        if (typeof item === "number" && Number.isFinite(item)) {
+          return item;
+        }
+        if (typeof item === "string" && item.trim() !== "") {
+          const parsed = Number(item);
+          if (Number.isFinite(parsed)) {
+            return parsed;
+          }
+        }
+        return null;
+      })
+      .filter((item) => item != null);
+  }
+
+  graphLabels(value, count) {
+    if (Array.isArray(value) && value.length > 0) {
+      return value.slice(0, count).map((item, index) => {
+        const label = this.asString(item).trim();
+        return label || `Point ${index + 1}`;
+      });
+    }
+
+    return Array.from({ length: count }, (_, index) => `Point ${index + 1}`);
+  }
+
+  graphHeightValue(value) {
+    const height = this.convertUnit(this.asString(value || "240px"), "literal");
+    return height || "240px";
+  }
+
+  graphColorValue(value) {
+    const themed = this.resolveThemeToken(value);
+    if (themed) {
+      return themed;
+    }
+    const primary = this.resolveThemeToken("primary");
+    if (primary) {
+      return primary;
+    }
+    const literal = this.sanitizeCssValue(this.asString(value));
+    return literal || "#6366f1";
+  }
+
+  graphRadiusValue() {
+    if (!this.output || !this.output.theme) {
+      return 8;
+    }
+
+    switch (this.output.theme.radius) {
+      case "none":
+        return 0;
+      case "sm":
+        return 4;
+      case "lg":
+        return 12;
+      case "full":
+        return 9999;
+      default:
+        return 8;
+    }
+  }
+
+  graphTransitionValue() {
+    if (!this.output || !this.output.theme) {
+      return "180ms ease";
+    }
+
+    switch (this.output.theme.speed) {
+      case "instant":
+        return "0s linear";
+      case "lazy":
+        return "320ms ease";
+      default:
+        return "180ms ease";
+    }
+  }
+
+  renderLineGraph(svg, model) {
+    const frame = this.graphFrame();
+    this.renderGraphFrame(svg, frame);
+    const points = this.graphPoints(model.values, frame);
+    if (points.length === 0) {
+      this.renderGraphPlaceholder(svg, "No graph data");
+      return;
+    }
+
+    const path = this.createSvgElement("path");
+    path.setAttribute("d", this.linePath(points));
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", model.color);
+    path.setAttribute("stroke-width", "4");
+    path.setAttribute("stroke-linejoin", "round");
+    path.setAttribute("stroke-linecap", "round");
+    svg.appendChild(path);
+
+    this.animateGraphLine(path);
+    this.renderGraphDots(svg, points, model.color);
+  }
+
+  renderAreaGraph(svg, model) {
+    const frame = this.graphFrame();
+    this.renderGraphFrame(svg, frame);
+    const points = this.graphPoints(model.values, frame);
+    if (points.length === 0) {
+      this.renderGraphPlaceholder(svg, "No graph data");
+      return;
+    }
+
+    const area = this.createSvgElement("path");
+    area.setAttribute("d", this.areaPath(points, frame));
+    area.setAttribute("fill", model.color);
+    area.setAttribute("fill-opacity", "0.18");
+    svg.appendChild(area);
+
+    const line = this.createSvgElement("path");
+    line.setAttribute("d", this.linePath(points));
+    line.setAttribute("fill", "none");
+    line.setAttribute("stroke", model.color);
+    line.setAttribute("stroke-width", "4");
+    line.setAttribute("stroke-linejoin", "round");
+    line.setAttribute("stroke-linecap", "round");
+    svg.appendChild(line);
+
+    this.animateGraphLine(line);
+    this.renderGraphDots(svg, points, model.color);
+  }
+
+  renderBarGraph(svg, model) {
+    const frame = this.graphFrame();
+    this.renderGraphFrame(svg, frame);
+    const bars = this.graphBars(model.values, frame);
+    bars.forEach((bar) => {
+      const rect = this.createSvgElement("rect");
+      rect.setAttribute("x", String(bar.x));
+      rect.setAttribute("y", String(bar.y));
+      rect.setAttribute("width", String(bar.width));
+      rect.setAttribute("height", String(bar.height));
+      rect.setAttribute("rx", String(model.radius));
+      rect.setAttribute("ry", String(model.radius));
+      rect.setAttribute("fill", model.color);
+      rect.setAttribute("fill-opacity", "0.9");
+      svg.appendChild(rect);
+    });
+  }
+
+  renderPieGraph(svg, model) {
+    const values = model.values.filter((value) => value > 0);
+    if (values.length === 0) {
+      this.renderGraphPlaceholder(svg, "No graph data");
+      return;
+    }
+
+    const colors = this.graphPalette(model.color);
+    const centerX = 320;
+    const centerY = 120;
+    const radius = 82;
+    let startAngle = -90;
+    const total = values.reduce((sum, value) => sum + value, 0);
+
+    values.forEach((value, index) => {
+      const sliceAngle = (value / total) * 360;
+      const endAngle = startAngle + sliceAngle;
+      const path = this.createSvgElement("path");
+      path.setAttribute(
+        "d",
+        this.describePieSlice(centerX, centerY, radius, startAngle, endAngle)
+      );
+      path.setAttribute("fill", colors[index % colors.length]);
+      path.setAttribute("stroke", "rgba(255, 255, 255, 0.9)");
+      path.setAttribute("stroke-width", "2");
+      svg.appendChild(path);
+      startAngle = endAngle;
+    });
+  }
+
+  renderGraphPlaceholder(svg, message) {
+    const rect = this.createSvgElement("rect");
+    rect.setAttribute("x", "16");
+    rect.setAttribute("y", "16");
+    rect.setAttribute("width", "608");
+    rect.setAttribute("height", "208");
+    rect.setAttribute("rx", "16");
+    rect.setAttribute("fill", "rgba(148, 163, 184, 0.12)");
+    svg.appendChild(rect);
+
+    const text = this.createSvgElement("text");
+    text.setAttribute("x", "320");
+    text.setAttribute("y", "124");
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("font-size", "16");
+    text.setAttribute("fill", this.resolveThemeToken("text") || "#475569");
+    text.textContent = message;
+    svg.appendChild(text);
+  }
+
+  renderGraphFrame(svg, frame) {
+    const axis = this.createSvgElement("path");
+    axis.setAttribute(
+      "d",
+      `M ${frame.left} ${frame.top} L ${frame.left} ${frame.bottom} L ${frame.right} ${frame.bottom}`
+    );
+    axis.setAttribute("fill", "none");
+    axis.setAttribute("stroke", "rgba(148, 163, 184, 0.5)");
+    axis.setAttribute("stroke-width", "2");
+    svg.appendChild(axis);
+  }
+
+  renderGraphDots(svg, points, color) {
+    points.forEach((point) => {
+      const dot = this.createSvgElement("circle");
+      dot.setAttribute("cx", String(point.x));
+      dot.setAttribute("cy", String(point.y));
+      dot.setAttribute("r", "4");
+      dot.setAttribute("fill", color);
+      svg.appendChild(dot);
+    });
+  }
+
+  graphFrame() {
+    return { left: 40, top: 20, right: 620, bottom: 200 };
+  }
+
+  graphPoints(values, frame) {
+    if (!Array.isArray(values) || values.length === 0) {
+      return [];
+    }
+
+    const min = Math.min(...values, 0);
+    const max = Math.max(...values, 1);
+    const span = max - min || 1;
+    const width = frame.right - frame.left;
+    const height = frame.bottom - frame.top;
+
+    return values.map((value, index) => {
+      const x =
+        frame.left + (values.length === 1 ? width / 2 : (width * index) / (values.length - 1));
+      const y = frame.bottom - ((value - min) / span) * height;
+      return { x, y };
+    });
+  }
+
+  graphBars(values, frame) {
+    if (!Array.isArray(values) || values.length === 0) {
+      return [];
+    }
+
+    const max = Math.max(...values, 1);
+    const width = frame.right - frame.left;
+    const height = frame.bottom - frame.top;
+    const gap = 12;
+    const barWidth = Math.max((width - gap * (values.length - 1)) / values.length, 12);
+
+    return values.map((value, index) => {
+      const barHeight = max === 0 ? 0 : (value / max) * height;
+      return {
+        x: frame.left + index * (barWidth + gap),
+        y: frame.bottom - barHeight,
+        width: barWidth,
+        height: barHeight,
+      };
+    });
+  }
+
+  linePath(points) {
+    if (points.length === 0) {
+      return "";
+    }
+    return points
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ");
+  }
+
+  areaPath(points, frame) {
+    if (points.length === 0) {
+      return "";
+    }
+    return `${this.linePath(points)} L ${points[points.length - 1].x} ${frame.bottom} L ${points[0].x} ${frame.bottom} Z`;
+  }
+
+  animateGraphLine(path) {
+    const length = typeof path.getTotalLength === "function" ? path.getTotalLength() : 0;
+    if (!length) {
+      return;
+    }
+
+    path.style.strokeDasharray = String(length);
+    path.style.strokeDashoffset = String(length);
+    path.style.transition = `stroke-dashoffset ${this.graphTransitionValue()}`;
+    const schedule =
+      typeof window !== "undefined" && typeof window.requestAnimationFrame === "function"
+        ? window.requestAnimationFrame.bind(window)
+        : (callback) => setTimeout(callback, 0);
+    schedule(() => {
+      path.style.strokeDashoffset = "0";
+    });
+  }
+
+  graphPalette(baseColor) {
+    return [
+      baseColor,
+      "rgba(99, 102, 241, 0.82)",
+      "rgba(14, 165, 233, 0.78)",
+      "rgba(16, 185, 129, 0.78)",
+      "rgba(245, 158, 11, 0.8)",
+    ];
+  }
+
+  describePieSlice(centerX, centerY, radius, startAngle, endAngle) {
+    const start = this.polarToCartesian(centerX, centerY, radius, endAngle);
+    const end = this.polarToCartesian(centerX, centerY, radius, startAngle);
+    const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+    return [
+      "M",
+      centerX,
+      centerY,
+      "L",
+      start.x,
+      start.y,
+      "A",
+      radius,
+      radius,
+      0,
+      largeArcFlag,
+      0,
+      end.x,
+      end.y,
+      "Z",
+    ].join(" ");
+  }
+
+  polarToCartesian(centerX, centerY, radius, angleInDegrees) {
+    const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
+    return {
+      x: centerX + radius * Math.cos(angleInRadians),
+      y: centerY + radius * Math.sin(angleInRadians),
+    };
+  }
+
+  createSvgElement(name) {
+    return document.createElementNS("http://www.w3.org/2000/svg", name);
+  }
+
+  formatGraphNumber(value) {
+    return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "");
   }
 
   sanitizeCssProperty(value) {

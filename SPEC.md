@@ -1,4 +1,4 @@
-# CoreUI Technical Specification v1.0
+# CoreUI Technical Specification v1.3.0
 
 ## 1. BNF Grammar
 <program>    ::= [ <theme_block> ] <component>
@@ -38,6 +38,7 @@ UI components support `id` (String - Mandatory), `hidden` (Bool), and `style` (S
 | **Image** | src (String - Mandatory), width (Unit), alt |
 | **Trigger** | label, action, variant |
 | **DataTable**| source, selectable (Bool) |
+| **Graph** | type ("line"\|"bar"\|"area"\|"pie" - Mandatory), data (JSON Array or quoted app:reference - Mandatory), color (Theme Token), height (Unit), labels (Array of Strings) |
 
 ## 3. The Action Protocol
 Interactivity follows the format: `namespace:action(key=value)`.
@@ -58,3 +59,5 @@ The compiler must produce a JSON object with:
 4. `metadata`: Compilation timestamp and compiler version.
 
 Action values are sub-parsed and emitted inline at `tree.attributes.action` rather than as a separate top-level collection. `Theme` is treated as a top-level metadata definition and is not included in the UI `tree`. `Image.src` remains a plain path in normal compilation and is upgraded to a Base64 `data:` URL only for standalone output when the local file can be resolved.
+
+`Graph.data` is emitted inline at `tree.attributes.data` as either a numeric JSON array or a quoted `app:` reference string. `Graph.labels` is emitted as a JSON string array aligned by index with `data` when literal values are provided.

@@ -1,6 +1,6 @@
 # CoreUI Context Stream
 
-**Registry Version:** 1.2.0
+**Registry Version:** 1.3.0
 **Schema Compatibility:** 1.0
 **Last Updated:** 2026-04-26
 
@@ -70,6 +70,23 @@ Type Safety: Units (px, %, *) are distinct from raw strings. The compiler must n
 | selectable | Bool | Optional |
 | source | String | Optional |
 | style | String | Optional |
+
+
+
+### Graph
+
+- **HasChildren:** false
+
+| Attribute | Type | Requirement |
+| --- | --- | --- |
+| color | Theme Token | Optional |
+| data | JSON Array or app:reference | Required |
+| height | Unit | Optional |
+| hidden | Bool | Optional |
+| id | String | Required |
+| labels | []string | Optional |
+| style | String | Optional |
+| type | String | Required |
 
 
 
@@ -188,6 +205,28 @@ Type Safety: Units (px, %, *) are distinct from raw strings. The compiler must n
 | title | String | Optional |
 
 
+
+## BI & Visualization Guidance
+
+The `Graph` component is the BI and visualization primitive for CoreUI.
+
+- `labels` is a string array for axis or legend text.
+- `data` is either a literal numeric JSON array or a quoted `app:` reference string when your simulation data is resolved at runtime.
+- Keep `labels` and literal `data` arrays aligned by index: the first label describes the first value, the second label describes the second value, and so on.
+- When emitting runtime references, prefer stable names such as `app:simulation.temperature_series` or `app:ops.queue_depth` so downstream agents can map data producers to Graph nodes deterministically.
+
+Example:
+
+~~~cui
+Graph(
+    id="temperature_graph",
+    type="area",
+    color="primary",
+    height=240px,
+    labels=["T+0", "T+5", "T+10", "T+15"],
+    data="app:simulation.temperature_series"
+)
+~~~
 
 ## Theme Tokens
 

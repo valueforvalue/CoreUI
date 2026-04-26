@@ -1,0 +1,17 @@
+Theme(id="Modern") {
+    Color(key="radius", value="md"),
+    Color(key="shadow", value="soft"),
+    Color(key="speed", value="smooth"),
+    Color(key="surface", value="#ffffff"),
+    Color(key="panel", value="#ffffff"),
+    Color(key="background", value="#f8fafc"),
+    Color(key="text", value="#0f172a"),
+    Color(key="primary", value="#6366f1")
+}
+
+View(id="graph_view", title="Graph Fixture", theme="Modern") {
+    Stack(id="graph_stack", dir="v", gap=16px) {
+        Text(id="graph_title", value="Synthetic Throughput", size=20px, weight="bold")
+        Graph(id="fixture_graph", type="bar", color="primary", height=220px, labels=["Batch A", "Batch B", "Batch C"], data=[14, 19, 23])
+    }
+}

@@ -138,6 +138,29 @@ func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 			baseStyle(node, theme),
 			children,
 		)
+	case "Graph":
+		values, reference := graphDataAttribute(node, "data")
+		decls := []styleDecl{
+			styleDeclFor("display", "flex"),
+			styleDeclFor("flex-direction", "column"),
+			styleDeclFor("gap", "12px"),
+			styleDeclFor("width", "100%"),
+		}
+		height := UnitToCSS(unitAttribute(node, "height"), UnitContextLiteral)
+		if height == "" {
+			height = "240px"
+		}
+		return graphComponent(
+			id,
+			baseStyle(node, theme, decls...),
+			stringAttribute(node, "type"),
+			values,
+			stringArrayAttribute(node, "labels"),
+			reference,
+			graphColorValue(stringAttribute(node, "color"), theme),
+			graphRadiusValue(theme),
+			height,
+		)
 	default:
 		return unknownComponent(id, node.Type, baseStyle(node, theme), children)
 	}
@@ -256,4 +279,80 @@ func actionAttribute(node *ast.Node, key string) (ast.Action, bool) {
 	}
 	action, ok := value.Data.(ast.Action)
 	return action, ok
+}
+
+func stringArrayAttribute(node *ast.Node, key string) []string {
+	if node == nil {
+		return nil
+	}
+	value, ok := node.Attributes[key]
+	if !ok || value.Kind != ast.ArrayKind {
+		return nil
+	}
+	items, _ := value.Data.([]ast.Value)
+	if len(items) == 0 {
+		return nil
+	}
+
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.Kind != ast.StringKind {
+			continue
+		}
+		text, _ := item.Data.(string)
+		out = append(out, text)
+	}
+	return out
+}
+
+func graphDataAttribute(node *ast.Node, key string) ([]float64, string) {
+	if node == nil {
+		return nil, ""
+	}
+	value, ok := node.Attributes[key]
+	if !ok {
+		return nil, ""
+	}
+
+	switch value.Kind {
+	case ast.StringKind:
+		text, _ := value.Data.(string)
+		return nil, text
+	case ast.ArrayKind:
+		items, _ := value.Data.([]ast.Value)
+		out := make([]float64, 0, len(items))
+		for _, item := range items {
+			switch item.Kind {
+			case ast.IntKind:
+				number, _ := item.Data.(int64)
+				out = append(out, float64(number))
+			case ast.NumberKind:
+				number, _ := item.Data.(float64)
+				out = append(out, number)
+			}
+		}
+		return out, ""
+	default:
+		return nil, ""
+	}
+}
+
+func graphColorValue(value string, theme map[string]string) string {
+	if token := resolveThemeToken(value, theme); token != "" {
+		return token
+	}
+	if token := resolveThemeToken("primary", theme); token != "" {
+		return token
+	}
+	if sanitized := sanitizeCSSValue(value); sanitized != "" {
+		return sanitized
+	}
+	return "#6366f1"
+}
+
+func graphRadiusValue(theme map[string]string) string {
+	if radius := semanticTokenCSSValue("radius", theme["radius"]); radius != "" {
+		return radius
+	}
+	return "8px"
 }

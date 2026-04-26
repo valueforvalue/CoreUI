@@ -3,12 +3,13 @@ package registry
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"coreui/pkg/ast"
 )
 
 const (
-	Version             = "1.2.0"
+	Version             = "1.3.0"
 	SchemaCompatibility = "1.0"
 	LastUpdated         = "2026-04-26"
 )
@@ -78,19 +79,22 @@ var factoryThemes = []FactoryTheme{
 type ValueType string
 
 const (
-	StringType    ValueType = "string"
-	BoolType      ValueType = "bool"
-	IntType       ValueType = "int"
-	NumberType    ValueType = "number"
-	UnitType      ValueType = "unit"
-	UnitArrayType ValueType = "unit_array"
-	ActionType    ValueType = "action"
+	StringType                 ValueType = "string"
+	BoolType                   ValueType = "bool"
+	IntType                    ValueType = "int"
+	NumberType                 ValueType = "number"
+	UnitType                   ValueType = "unit"
+	UnitArrayType              ValueType = "unit_array"
+	StringArrayType            ValueType = "string_array"
+	NumberArrayOrReferenceType ValueType = "number_array_or_reference"
+	ActionType                 ValueType = "action"
 )
 
 type AttributeSpec struct {
 	Type     ValueType
 	Required bool
 	Enum     map[string]struct{}
+	DocType  string
 }
 
 type ComponentSpec struct {
@@ -179,6 +183,16 @@ var componentSpecs = map[string]ComponentSpec{
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"source":     {Type: StringType},
 			"selectable": {Type: BoolType},
+		}),
+	},
+	"Graph": {
+		Name: "Graph",
+		Attributes: mergeCommon(map[string]AttributeSpec{
+			"type":   {Type: StringType, Required: true, Enum: enumSet("line", "bar", "area", "pie")},
+			"data":   {Type: NumberArrayOrReferenceType, Required: true, DocType: "JSON Array or app:reference"},
+			"color":  {Type: StringType, DocType: "Theme Token"},
+			"height": {Type: UnitType},
+			"labels": {Type: StringArrayType, DocType: "[]string"},
 		}),
 	},
 	"Theme": {
@@ -329,6 +343,39 @@ func ValidateValue(component, attr string, value ast.Value) error {
 			if item.Kind != ast.UnitKind {
 				return fmt.Errorf("attribute %q expects array of units", attr)
 			}
+		}
+	case StringArrayType:
+		if value.Kind != ast.ArrayKind {
+			return fmt.Errorf("attribute %q expects array", attr)
+		}
+		values, ok := value.Data.([]ast.Value)
+		if !ok {
+			return fmt.Errorf("attribute %q expects string array", attr)
+		}
+		for _, item := range values {
+			if item.Kind != ast.StringKind {
+				return fmt.Errorf("attribute %q expects array of strings", attr)
+			}
+		}
+	case NumberArrayOrReferenceType:
+		switch value.Kind {
+		case ast.ArrayKind:
+			values, ok := value.Data.([]ast.Value)
+			if !ok {
+				return fmt.Errorf("attribute %q expects numeric array or app:reference", attr)
+			}
+			for _, item := range values {
+				if item.Kind != ast.IntKind && item.Kind != ast.NumberKind {
+					return fmt.Errorf("attribute %q expects array of numbers", attr)
+				}
+			}
+		case ast.StringKind:
+			raw, _ := value.Data.(string)
+			if !strings.HasPrefix(strings.TrimSpace(raw), "app:") {
+				return fmt.Errorf("attribute %q expects JSON array or app:reference", attr)
+			}
+		default:
+			return fmt.Errorf("attribute %q expects JSON array or app:reference", attr)
 		}
 	case ActionType:
 		if value.Kind != ast.ActionKind {

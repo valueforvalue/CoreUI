@@ -175,3 +175,47 @@ func TestParserSuggestsBackgroundAttribute(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestParserAcceptsGraphArrays(t *testing.T) {
+	source := `Graph(id="g1", type="line", color="primary", height=240px, labels=["08:00", "10:00"], data=[18, 24.5])`
+
+	node, err := parser.New(source).Parse()
+	if err != nil {
+		t.Fatalf("expected graph to parse, got %v", err)
+	}
+
+	if node.Type != "Graph" {
+		t.Fatalf("expected Graph node, got %s", node.Type)
+	}
+	if node.Attributes["labels"].Kind != ast.ArrayKind {
+		t.Fatalf("expected labels array, got %+v", node.Attributes["labels"])
+	}
+	if node.Attributes["data"].Kind != ast.ArrayKind {
+		t.Fatalf("expected data array, got %+v", node.Attributes["data"])
+	}
+}
+
+func TestParserAcceptsGraphAppReference(t *testing.T) {
+	source := `Graph(id="g1", type="area", data="app:simulation.temperature_series")`
+
+	node, err := parser.New(source).Parse()
+	if err != nil {
+		t.Fatalf("expected graph reference to parse, got %v", err)
+	}
+
+	if node.Attributes["data"].Kind != ast.StringKind {
+		t.Fatalf("expected string graph reference, got %+v", node.Attributes["data"])
+	}
+}
+
+func TestParserRejectsGraphInvalidHeightUnit(t *testing.T) {
+	source := `Graph(id="g1", type="bar", data=[5, 9], height=500xyz)`
+
+	_, err := parser.New(source).Parse()
+	if err == nil {
+		t.Fatal("expected invalid graph height error")
+	}
+	if !strings.Contains(err.Error(), `expects unit`) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

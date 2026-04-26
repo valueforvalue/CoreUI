@@ -55,6 +55,7 @@ Theme(id="Cyber") {
 View(id="root", title="New CoreUI Project", theme="Modern") {
     Stack(id="main_stack", dir="v", gap=20px) {
         Text(id="header_text", value="Welcome to CoreUI", size=28px, weight="bold", style="color: primary")
+        Graph(id="trend_graph", type="line", color="primary", height=240px, labels=["08:00", "10:00", "12:00", "14:00", "16:00"], data=[18, 24, 21, 29, 34])
         Box(id="panel_box", padding=20px, background="background", variant="outline") {
             Text(id="panel_text", value="Use this panel to sketch your first screen.", style="color: text")
         }

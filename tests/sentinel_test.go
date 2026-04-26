@@ -37,6 +37,32 @@ func TestSentinelGuardrails(t *testing.T) {
 			actualJSON := marshalIndented(t, actual)
 			t.Fatalf("kitchen_sink output drifted from tests\\golden\\kitchen_sink.json\nexpected:\n%s\nactual:\n%s", expectedJSON, actualJSON)
 		}
+
+		if got := nodeTypeForID(t, actual, "traffic_graph"); got != "Graph" {
+			t.Fatalf("expected kitchen sink graph node, got %q", got)
+		}
+	})
+
+	t.Run("graph fixture json", func(t *testing.T) {
+		tempDir := t.TempDir()
+		actualPath := filepath.Join(tempDir, "Graph_fixture.json")
+		fixturePath := filepath.Join("testdata", "Graph_fixture.cui")
+
+		runGo(t, root, "run", "./cmd/corec", "-o", actualPath, fixturePath)
+
+		expected := readJSONFixture(t, filepath.Join(root, "testdata", "Graph_fixture.json"))
+		actual := readJSONFixture(t, actualPath)
+
+		normalizeMetadataTimestamp(expected)
+		normalizeMetadataTimestamp(actual)
+		normalizeMetadataVersion(expected)
+		normalizeMetadataVersion(actual)
+
+		if !reflect.DeepEqual(expected, actual) {
+			expectedJSON := marshalIndented(t, expected)
+			actualJSON := marshalIndented(t, actual)
+			t.Fatalf("Graph fixture output drifted from testdata\\Graph_fixture.json\nexpected:\n%s\nactual:\n%s", expectedJSON, actualJSON)
+		}
 	})
 
 	t.Run("standalone html essentials", func(t *testing.T) {
@@ -55,6 +81,7 @@ func TestSentinelGuardrails(t *testing.T) {
 		requiredSnippets := []string{
 			`<div id="coreui-root"></div>`,
 			`class CoreUI`,
+			`case "Graph":`,
 			`const jsonData =`,
 			`document.addEventListener("DOMContentLoaded"`,
 		}
@@ -82,6 +109,9 @@ func TestSentinelGuardrails(t *testing.T) {
 		}
 		if len(embeddedImageSrc) <= len("coreui-logo.svg") {
 			t.Fatalf("expected standalone image src to be longer than the normal file path, got %d bytes", len(embeddedImageSrc))
+		}
+		if got := nodeTypeForID(t, embedded, "traffic_graph"); got != "Graph" {
+			t.Fatalf("expected standalone payload graph node, got %q", got)
 		}
 	})
 
@@ -174,6 +204,22 @@ func marshalIndented(t *testing.T, value any) string {
 	return string(data)
 }
 
+func normalizeMetadataVersion(value any) {
+	object, ok := value.(map[string]any)
+	if !ok {
+		return
+	}
+
+	metadata, ok := object["metadata"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	if _, ok := metadata["version"].(string); ok {
+		metadata["version"] = "<normalized>"
+	}
+}
+
 func imageSourceForID(t *testing.T, value any, id string) string {
 	t.Helper()
 
@@ -202,6 +248,30 @@ func imageSourceForID(t *testing.T, value any, id string) string {
 		t.Fatalf("node %s is missing a string src attribute", id)
 	}
 	return src
+}
+
+func nodeTypeForID(t *testing.T, value any, id string) string {
+	t.Helper()
+
+	object, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("expected JSON object while searching for %s", id)
+	}
+	tree, ok := object["tree"]
+	if !ok {
+		t.Fatalf("missing tree while searching for %s", id)
+	}
+
+	node := findNodeByID(tree, id)
+	if node == nil {
+		t.Fatalf("missing node with id %s", id)
+	}
+
+	nodeType, ok := node["type"].(string)
+	if !ok {
+		t.Fatalf("node %s is missing a string type", id)
+	}
+	return nodeType
 }
 
 func findNodeByID(value any, id string) map[string]any {

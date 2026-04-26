@@ -1,6 +1,6 @@
 # CoreUI Components Reference
 
-**Registry Version:** 1.2.0
+**Registry Version:** 1.3.0
 **Schema Compatibility:** 1.0
 **Last Updated:** 2026-04-26
 
@@ -51,6 +51,42 @@ CoreUI action values use the form `namespace:function(key="value")`.
 | source | String | Optional |
 | style | String | Optional |
 
+
+
+## Graph
+
+**HasChildren:** false
+
+| Prop | Type | Requirement |
+| --- | --- | --- |
+| color | Theme Token | Optional |
+| data | JSON Array or app:reference | Required |
+| height | Unit | Optional |
+| hidden | Bool | Optional |
+| id | String | Required |
+| labels | []string | Optional |
+| style | String | Optional |
+| type | String | Required |
+
+
+### Best Practices
+
+Use `labels` and `data` as parallel arrays with the same length so each label maps to the value at the same index.
+
+- Prefer a quoted app reference such as `data="app:simulation.pressure_series"` when live data comes from your application layer.
+- Use `type="line"` or `type="area"` for time series, `type="bar"` for ranked comparisons, and `type="pie"` only for small part-to-whole slices.
+- Keep `height` unit-backed (for example `220px` or `40%`) so the compiler can reject invalid units before rendering.
+
+~~~cui
+Graph(
+    id="throughput_graph",
+    type="line",
+    color="primary",
+    height=240px,
+    labels=["08:00", "10:00", "12:00", "14:00"],
+    data=[18, 24, 21, 29]
+)
+~~~
 
 
 ## Grid

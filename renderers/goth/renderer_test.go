@@ -133,6 +133,47 @@ func TestRenderImageIncludesImgTagAndWidth(t *testing.T) {
 	}
 }
 
+func TestRenderGraphIncludesSVGAndLegend(t *testing.T) {
+	component := RenderWithTheme(ast.Node{
+		Type: "Graph",
+		Attributes: map[string]ast.Value{
+			"id":     {Kind: ast.StringKind, Data: "trend_graph"},
+			"type":   {Kind: ast.StringKind, Data: "line"},
+			"color":  {Kind: ast.StringKind, Data: "primary"},
+			"height": {Kind: ast.UnitKind, Data: "220px"},
+			"labels": {Kind: ast.ArrayKind, Data: []ast.Value{
+				{Kind: ast.StringKind, Data: "08:00"},
+				{Kind: ast.StringKind, Data: "10:00"},
+			}},
+			"data": {Kind: ast.ArrayKind, Data: []ast.Value{
+				{Kind: ast.IntKind, Data: int64(18)},
+				{Kind: ast.NumberKind, Data: 24.5},
+			}},
+		},
+	}, map[string]string{
+		"primary": "#0984e3",
+		"radius":  "md",
+	})
+
+	var buf bytes.Buffer
+	if err := component.Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render failed: %v", err)
+	}
+
+	html := buf.String()
+	for _, want := range []string{
+		`data-coreui-type="Graph"`,
+		`<svg`,
+		`stroke="var(--coreui-primary)"`,
+		`08:00: 18`,
+		`10:00: 24.5`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("expected rendered html to contain %q, got %s", want, html)
+		}
+	}
+}
+
 func TestParseActionRequestFromForm(t *testing.T) {
 	values := url.Values{}
 	values.Set("namespace", "ui")
