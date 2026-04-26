@@ -57,9 +57,14 @@ export class CoreUI {
       .sort()
       .forEach((key) => {
         const safeKey = this.sanitizeThemeKey(key);
-        const safeValue = this.sanitizeCssValue(theme[key]);
-        if (safeKey && safeValue) {
-          declarations.push(`--coreui-${safeKey}: ${safeValue};`);
+        const resolvedValue = this.resolveThemeDefinitionValue(safeKey, theme[key]);
+        if (safeKey && resolvedValue) {
+          declarations.push(`--coreui-${safeKey}: ${resolvedValue};`);
+        }
+
+        const semanticValue = this.semanticThemeValue(safeKey, theme[key]);
+        if (safeKey && semanticValue) {
+          declarations.push(`--cui-${safeKey}: ${semanticValue};`);
         }
       });
 
@@ -278,6 +283,8 @@ section, div, span, button, input, img, table, caption, tbody, tr, td, th {
         this.applyStyleProperty(element, "gap", attrs.gap);
         break;
       case "Box":
+        this.applySemanticStyles(element, { interactive: false, elevated: true });
+        this.applyVariantStyles(element, attrs.variant);
         this.applyStyleProperty(element, "padding", attrs.padding);
         this.applyStyleProperty(element, "background", attrs.background);
         if (typeof attrs.border === "number") {
@@ -291,6 +298,13 @@ section, div, span, button, input, img, table, caption, tbody, tr, td, th {
         break;
       case "Image":
         this.applyStyleProperty(element, "width", attrs.width);
+        break;
+      case "Input":
+        this.applySemanticStyles(element.querySelector("input") || element, { interactive: true, elevated: false });
+        break;
+      case "Trigger":
+        this.applySemanticStyles(element, { interactive: true, elevated: true });
+        this.applyVariantStyles(element, attrs.variant);
         break;
       default:
         break;
@@ -387,6 +401,113 @@ section, div, span, button, input, img, table, caption, tbody, tr, td, th {
     }
 
     return "";
+  }
+
+  resolveThemeDefinitionValue(key, value) {
+    const semanticValue = this.semanticThemeValue(key, value);
+    if (semanticValue) {
+      return semanticValue;
+    }
+
+    const tokenKey = this.sanitizeThemeKey(value);
+    if (tokenKey && this.themeHas(tokenKey)) {
+      return `var(--coreui-${tokenKey})`;
+    }
+
+    return this.sanitizeCssValue(value);
+  }
+
+  semanticThemeValue(key, value) {
+    switch (key) {
+      case "radius":
+        switch (value) {
+          case "none":
+            return "0";
+          case "sm":
+            return "4px";
+          case "md":
+            return "8px";
+          case "lg":
+            return "12px";
+          case "full":
+            return "9999px";
+          default:
+            return "";
+        }
+      case "shadow":
+        switch (value) {
+          case "none":
+            return "none";
+          case "soft":
+            return "0 10px 30px rgba(15, 23, 42, 0.12)";
+          case "deep":
+            return "0 18px 45px rgba(15, 23, 42, 0.22)";
+          default:
+            return "";
+        }
+      case "speed":
+        switch (value) {
+          case "instant":
+            return "all 0s linear";
+          case "smooth":
+            return "all 180ms ease";
+          case "lazy":
+            return "all 320ms ease";
+          default:
+            return "";
+        }
+      default:
+        return "";
+    }
+  }
+
+  applySemanticStyles(element, options) {
+    if (this.themeHas("radius")) {
+      element.style.borderRadius = "var(--cui-radius)";
+    }
+    if (options && options.elevated && this.themeHas("shadow")) {
+      element.style.boxShadow = "var(--cui-shadow)";
+    }
+    if (options && options.interactive && this.themeHas("speed")) {
+      element.style.transition = "var(--cui-speed)";
+    }
+  }
+
+  applyVariantStyles(element, variant) {
+    const safeVariant = this.sanitizeThemeKey(variant);
+    const primary = this.resolveThemeToken("primary");
+    const text = this.resolveThemeToken("text") || "inherit";
+
+    if (!safeVariant || !primary) {
+      return;
+    }
+
+    switch (safeVariant) {
+      case "primary":
+        element.style.background = primary;
+        element.style.borderWidth = "1px";
+        element.style.borderStyle = "solid";
+        element.style.borderColor = primary;
+        element.style.color = text;
+        break;
+      case "secondary":
+      case "outline":
+        element.style.background = "transparent";
+        element.style.borderWidth = "1px";
+        element.style.borderStyle = "solid";
+        element.style.borderColor = primary;
+        element.style.color = primary;
+        break;
+      case "ghost":
+        element.style.background = "transparent";
+        element.style.borderWidth = "1px";
+        element.style.borderStyle = "solid";
+        element.style.borderColor = "transparent";
+        element.style.color = primary;
+        break;
+      default:
+        break;
+    }
   }
 
   convertUnit(value, context) {
@@ -487,6 +608,14 @@ section, div, span, button, input, img, table, caption, tbody, tr, td, th {
       property === "border-color" ||
       property === "fill" ||
       property === "stroke"
+    );
+  }
+
+  themeHas(key) {
+    return (
+      this.output &&
+      this.output.theme &&
+      Object.prototype.hasOwnProperty.call(this.output.theme, key)
     );
   }
 

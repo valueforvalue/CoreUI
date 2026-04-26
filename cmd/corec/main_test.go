@@ -34,12 +34,14 @@ func TestRunInitCreatesTemplateAndInstructions(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		`Theme(id="standard")`,
-		`View(id="root", title="New CoreUI Project")`,
+		`Theme(id="Industrial")`,
+		`Theme(id="Modern")`,
+		`Theme(id="Cyber")`,
+		`View(id="root", title="New CoreUI Project", theme="Modern")`,
 		`Stack(id="main_stack", dir="v", gap=20px)`,
-		`Box(id="panel_box", padding=20px, background="panel")`,
+		`Box(id="panel_box", padding=20px, background="background", variant="outline")`,
 		`Image(id="hero_image", src="placeholder.png", width=100px, alt="Placeholder image")`,
-		`Trigger(id="notify_button", label="Click Me", action="app:notify(msg=\"Hello from CoreUI!\")")`,
+		`Trigger(id="notify_button", label="Click Me", variant="primary", action="app:notify(msg=\"Hello from CoreUI!\")")`,
 		`[Success] Initialized 'hello_world.cui'`,
 		`Run 'corec -s hello_world.cui' to bundle it.`,
 		`Open 'hello_world.html' in any browser.`,
@@ -101,6 +103,42 @@ func TestInitTemplateCompilesToStandaloneHTML(t *testing.T) {
 	} {
 		if !strings.Contains(string(html), want) {
 			t.Fatalf("expected standalone html to contain %q", want)
+		}
+	}
+}
+
+func TestRunContextIncludesCoreSections(t *testing.T) {
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	repoRoot := filepath.Clean(filepath.Join(originalDir, "..", ".."))
+	if err := os.Chdir(repoRoot); err != nil {
+		t.Fatalf("chdir repo root: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(originalDir)
+	})
+
+	var output bytes.Buffer
+	if err := runContext(&output); err != nil {
+		t.Fatalf("runContext failed: %v", err)
+	}
+
+	for _, want := range []string{
+		"# CoreUI Context Stream",
+		"## Iron-Clad Architecture Principles",
+		"## Component Catalog",
+		"## Theme Tokens",
+		"## Action Protocol",
+		"## Wiring Snippets",
+		"### Go (GOTH)",
+		"### JavaScript (Standalone)",
+		"Registry Version:",
+		"Schema Compatibility:",
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("expected context output to contain %q", want)
 		}
 	}
 }

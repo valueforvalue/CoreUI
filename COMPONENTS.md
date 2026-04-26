@@ -18,18 +18,13 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | background | String | Optional |
-
 | border | Int | Optional |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | padding | Unit | Optional |
-
 | style | String | Optional |
+| variant | String | Optional |
 
 
 
@@ -39,9 +34,7 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | key | String | Required |
-
 | value | String | Required |
 
 
@@ -52,15 +45,10 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | selectable | Bool | Optional |
-
 | source | String | Optional |
-
 | style | String | Optional |
 
 
@@ -71,17 +59,11 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | cols | Unit Array | Optional |
-
 | gap | Unit | Optional |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | rows | Unit Array | Optional |
-
 | style | String | Optional |
 
 
@@ -92,17 +74,11 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | alt | String | Optional |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | src | String | Required |
-
 | style | String | Optional |
-
 | width | Unit | Optional |
 
 
@@ -113,17 +89,11 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | bind | String | Optional |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | label | String | Optional |
-
 | style | String | Optional |
-
 | type | String | Optional |
 
 
@@ -134,17 +104,11 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | align | String | Optional |
-
 | dir | String | Optional |
-
 | gap | Unit | Optional |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | style | String | Optional |
 
 
@@ -155,17 +119,11 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | size | Unit | Optional |
-
 | style | String | Optional |
-
 | value | String | Optional |
-
 | weight | String | Optional |
 
 
@@ -176,11 +134,8 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | style | String | Optional |
 
 
@@ -191,17 +146,11 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | action | Action | Optional |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | label | String | Optional |
-
 | style | String | Optional |
-
 | variant | String | Optional |
 
 
@@ -212,15 +161,10 @@ CoreUI action values use the form `namespace:function(key="value")`.
 
 | Prop | Type | Requirement |
 | --- | --- | --- |
-
 | hidden | Bool | Optional |
-
 | id | String | Required |
-
 | style | String | Optional |
-
 | theme | String | Optional |
-
 | title | String | Optional |
 
 

@@ -12,27 +12,54 @@ import (
 	"strings"
 
 	"coreui/pkg/compiler"
+	"coreui/pkg/docs"
 	"coreui/pkg/registry"
 	jsrenderer "coreui/renderers/js"
 )
 
 const version = "dev"
 
-const initTemplate = `Theme(id="standard") {
-    Color(key="primary", value="#0984e3"),
-    Color(key="surface", value="#f5f6fa"),
-    Color(key="panel", value="#dfe6e9"),
-    Color(key="text", value="#111827")
+const initTemplate = `Theme(id="Industrial") {
+    Color(key="radius", value="none"),
+    Color(key="shadow", value="none"),
+    Color(key="speed", value="instant"),
+    Color(key="surface", value="#dbe4f0"),
+    Color(key="panel", value="#ffffff"),
+    Color(key="background", value="surface"),
+    Color(key="text", value="#111827"),
+    Color(key="primary", value="#2563eb")
 }
 
-View(id="root", title="New CoreUI Project") {
+Theme(id="Modern") {
+    Color(key="radius", value="md"),
+    Color(key="shadow", value="soft"),
+    Color(key="speed", value="smooth"),
+    Color(key="surface", value="#ffffff"),
+    Color(key="panel", value="#ffffff"),
+    Color(key="background", value="#f8fafc"),
+    Color(key="text", value="#0f172a"),
+    Color(key="primary", value="#6366f1")
+}
+
+Theme(id="Cyber") {
+    Color(key="radius", value="none"),
+    Color(key="shadow", value="none"),
+    Color(key="speed", value="instant"),
+    Color(key="surface", value="#000000"),
+    Color(key="panel", value="#000000"),
+    Color(key="background", value="#000000"),
+    Color(key="text", value="#00ff00"),
+    Color(key="primary", value="#00ff00")
+}
+
+View(id="root", title="New CoreUI Project", theme="Modern") {
     Stack(id="main_stack", dir="v", gap=20px) {
         Text(id="header_text", value="Welcome to CoreUI", size=28px, weight="bold", style="color: primary")
-        Box(id="panel_box", padding=20px, background="panel") {
+        Box(id="panel_box", padding=20px, background="background", variant="outline") {
             Text(id="panel_text", value="Use this panel to sketch your first screen.", style="color: text")
         }
         Image(id="hero_image", src="placeholder.png", width=100px, alt="Placeholder image")
-        Trigger(id="notify_button", label="Click Me", action="app:notify(msg=\"Hello from CoreUI!\")")
+        Trigger(id="notify_button", label="Click Me", variant="primary", action="app:notify(msg=\"Hello from CoreUI!\")")
     }
 }
 `
@@ -93,6 +120,13 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "context" {
+		if err := runContext(os.Stdout); err != nil {
+			log.SetFlags(0)
+			log.Fatalf("%s", err.Error())
+		}
+		return
+	}
 
 	var outputPath string
 	var showVersion bool
@@ -110,7 +144,7 @@ func main() {
 	}
 
 	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec [-standalone] [-o output.{json|html}] input.cui")
+		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec context | corec [-standalone] [-o output.{json|html}] input.cui")
 		os.Exit(1)
 	}
 
@@ -163,6 +197,26 @@ func runInit(args []string, stdout io.Writer) error {
 
 	fmt.Fprintf(stdout, "[Success] Initialized '%s'\n\nQuick Start:\n1. Edit '%s' to design your UI.\n2. Run 'corec -s %s' to bundle it.\n3. Open '%s' in any browser.\n", fileName, fileName, fileName, defaultOutputPath(fileName, true))
 	return nil
+}
+
+func runContext(stdout io.Writer) error {
+	architecturePath, err := findProjectFile("ARCHITECTURE.md")
+	if err != nil {
+		return err
+	}
+
+	architecture, err := os.ReadFile(architecturePath)
+	if err != nil {
+		return err
+	}
+
+	content, err := docs.RenderContext(string(architecture))
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(stdout, content)
+	return err
 }
 
 func initFileName(projectName string) string {
@@ -218,4 +272,27 @@ func escapeJSONForScript(value string) string {
 		"\u2029", "\\u2029",
 	)
 	return replacer.Replace(value)
+}
+
+func findProjectFile(name string) (string, error) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	dir := workingDir
+	for {
+		candidate := filepath.Join(dir, name)
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+
+	return "", fmt.Errorf("could not locate %s", name)
 }

@@ -46,16 +46,20 @@ func (p *Parser) ParseDocument() (*ast.Document, error) {
 		return nil, diag.New(p.current.Line, p.current.Col, p.current.Literal)
 	}
 
-	var theme map[string]string
-	if p.current.Type == lexer.Identifier && p.current.Literal == "Theme" {
+	themes := map[string]map[string]string{}
+	themeOrder := make([]string, 0, 1)
+	for p.current.Type == lexer.Identifier && p.current.Literal == "Theme" {
 		themeNode, err := p.parseComponent()
 		if err != nil {
 			return nil, err
 		}
-		theme, err = p.extractTheme(themeNode)
+		theme, err := p.extractTheme(themeNode)
 		if err != nil {
 			return nil, err
 		}
+		themeID := themeNode.ID()
+		themes[themeID] = theme
+		themeOrder = append(themeOrder, themeID)
 		if p.current.Type == lexer.EOF {
 			return nil, diag.New(themeNode.Position.Line, themeNode.Position.Col, "missing root component")
 		}
@@ -71,6 +75,11 @@ func (p *Parser) ParseDocument() (*ast.Document, error) {
 
 	if p.current.Type != lexer.EOF {
 		return nil, diag.Newf(p.current.Line, p.current.Col, "unexpected token %q", p.current.Literal)
+	}
+
+	theme, err := p.selectTheme(node, themes, themeOrder)
+	if err != nil {
+		return nil, err
 	}
 
 	return &ast.Document{
@@ -408,9 +417,44 @@ func (p *Parser) extractTheme(node *ast.Node) (map[string]string, error) {
 	return theme, nil
 }
 
+func (p *Parser) selectTheme(node *ast.Node, themes map[string]map[string]string, order []string) (map[string]string, error) {
+	if len(themes) == 0 {
+		return nil, nil
+	}
+
+	selected := p.stringValue(node.Attributes["theme"])
+	if len(themes) == 1 {
+		if selected == "" || selected == order[0] {
+			return cloneThemeMap(themes[order[0]]), nil
+		}
+		return nil, diag.Newf(node.Position.Line, node.Position.Col, "unknown theme %q", selected)
+	}
+
+	if selected == "" {
+		return nil, diag.New(node.Position.Line, node.Position.Col, `multiple Theme blocks require View.theme to select one`)
+	}
+
+	theme, ok := themes[selected]
+	if !ok {
+		return nil, diag.Newf(node.Position.Line, node.Position.Col, "unknown theme %q", selected)
+	}
+	return cloneThemeMap(theme), nil
+}
+
 func (p *Parser) stringValue(value ast.Value) string {
 	text, _ := value.Data.(string)
 	return text
+}
+
+func cloneThemeMap(theme map[string]string) map[string]string {
+	if len(theme) == 0 {
+		return nil
+	}
+	cloned := make(map[string]string, len(theme))
+	for key, value := range theme {
+		cloned[key] = value
+	}
+	return cloned
 }
 
 func (p *Parser) unknownAttributeMessage(componentType, attribute string) string {

@@ -1,2 +1,4 @@
 corec.exe
 dist/
+release/package/
+release/*.zip

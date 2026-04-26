@@ -66,7 +66,9 @@ func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 
 		return gridComponent(id, baseStyle(node, theme, decls...), children)
 	case "Box":
-		decls := make([]styleDecl, 0, 3)
+		decls := make([]styleDecl, 0, 8)
+		decls = append(decls, semanticStyleDecls(theme, false, true)...)
+		decls = append(decls, variantStyleDecls(stringAttribute(node, "variant"), theme)...)
 		if padding := UnitToCSS(unitAttribute(node, "padding"), UnitContextLiteral); padding != "" {
 			decls = append(decls, styleDeclFor("padding", padding))
 		}
@@ -96,12 +98,13 @@ func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 		if inputType == "" {
 			inputType = "text"
 		}
+		decls := semanticStyleDecls(theme, true, false)
 		return inputComponent(
 			id,
 			stringAttribute(node, "label"),
 			stringAttribute(node, "bind"),
 			inputType,
-			baseStyle(node, theme),
+			baseStyle(node, theme, decls...),
 		)
 	case "Image":
 		decls := make([]styleDecl, 0, 1)
@@ -117,12 +120,15 @@ func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 	case "Trigger":
 		action, _ := actionAttribute(node, "action")
 		payload := encodeActionRequest(actionRequestFromAction(action))
+		decls := make([]styleDecl, 0, 8)
+		decls = append(decls, semanticStyleDecls(theme, true, true)...)
+		decls = append(decls, variantStyleDecls(stringAttribute(node, "variant"), theme)...)
 		return triggerComponent(
 			id,
 			stringAttribute(node, "label"),
 			sanitizeHTMLToken(stringAttribute(node, "variant")),
 			payload,
-			baseStyle(node, theme),
+			baseStyle(node, theme, decls...),
 		)
 	case "DataTable":
 		return dataTableComponent(

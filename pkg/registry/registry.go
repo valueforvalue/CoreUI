@@ -13,6 +13,68 @@ const (
 	LastUpdated         = "2026-04-26"
 )
 
+var standardThemeTokens = []string{"primary", "surface", "panel", "background", "text", "radius", "shadow", "speed"}
+
+var semanticTokens = map[string][]string{
+	"radius": {"none", "sm", "md", "lg", "full"},
+	"shadow": {"none", "soft", "deep"},
+	"speed":  {"instant", "smooth", "lazy"},
+}
+
+var builtInActions = []string{
+	`ui:navigate(target="id")`,
+	`ui:toggle(id="target_id")`,
+	`ui:close()`,
+	`ui:notify(msg="Done", type="success")`,
+}
+
+type FactoryTheme struct {
+	Name   string
+	Tokens map[string]string
+}
+
+var factoryThemes = []FactoryTheme{
+	{
+		Name: "Industrial",
+		Tokens: map[string]string{
+			"radius":     "none",
+			"shadow":     "none",
+			"speed":      "instant",
+			"surface":    "#dbe4f0",
+			"panel":      "#ffffff",
+			"background": "surface",
+			"text":       "#111827",
+			"primary":    "#2563eb",
+		},
+	},
+	{
+		Name: "Modern",
+		Tokens: map[string]string{
+			"radius":     "md",
+			"shadow":     "soft",
+			"speed":      "smooth",
+			"surface":    "#ffffff",
+			"panel":      "#ffffff",
+			"background": "#f8fafc",
+			"text":       "#0f172a",
+			"primary":    "#6366f1",
+		},
+	},
+	{
+		Name: "Cyber",
+		Tokens: map[string]string{
+			"radius":     "none",
+			"shadow":     "none",
+			"speed":      "instant",
+			"surface":    "#000000",
+			"panel":      "#000000",
+			"background": "#000000",
+			"text":       "#00ff00",
+			"primary":    "#00ff00",
+		},
+	},
+}
+
 type ValueType string
 
 const (
@@ -77,6 +139,7 @@ var componentSpecs = map[string]ComponentSpec{
 			"padding":    {Type: UnitType},
 			"border":     {Type: IntType},
 			"background": {Type: StringType},
+			"variant":    {Type: StringType, Enum: enumSet("primary", "secondary", "outline", "ghost")},
 		}),
 	},
 	"Text": {
@@ -108,7 +171,7 @@ var componentSpecs = map[string]ComponentSpec{
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"label":   {Type: StringType},
 			"action":  {Type: ActionType},
-			"variant": {Type: StringType},
+			"variant": {Type: StringType, Enum: enumSet("primary", "secondary", "outline", "ghost")},
 		}),
 	},
 	"DataTable": {
@@ -292,6 +355,37 @@ func cloneAttributes(attributes map[string]AttributeSpec) map[string]AttributeSp
 	cloned := make(map[string]AttributeSpec, len(attributes))
 	for key, spec := range attributes {
 		cloned[key] = spec
+	}
+	return cloned
+}
+
+func StandardThemeTokens() []string {
+	return append([]string(nil), standardThemeTokens...)
+}
+
+func BuiltInActions() []string {
+	return append([]string(nil), builtInActions...)
+}
+
+func SemanticTokens() map[string][]string {
+	cloned := make(map[string][]string, len(semanticTokens))
+	for key, values := range semanticTokens {
+		cloned[key] = append([]string(nil), values...)
+	}
+	return cloned
+}
+
+func FactoryThemes() []FactoryTheme {
+	cloned := make([]FactoryTheme, 0, len(factoryThemes))
+	for _, theme := range factoryThemes {
+		tokens := make(map[string]string, len(theme.Tokens))
+		for key, value := range theme.Tokens {
+			tokens[key] = value
+		}
+		cloned = append(cloned, FactoryTheme{
+			Name:   theme.Name,
+			Tokens: tokens,
+		})
 	}
 	return cloned
 }

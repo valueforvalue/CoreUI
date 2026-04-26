@@ -1,0 +1,16 @@
+I have provided the CoreUI context.md. Use it as your only source of truth.
+
+Your job is to rewrite my UI into valid CoreUI DSL.
+
+Rules:
+1. Follow the Registry exactly. Only use components, attributes, types, and nesting rules that appear in the provided context.
+2. Preserve layout intent using CoreUI primitives such as View, Stack, Grid, Box, Text, Input, Image, Trigger, DataTable, Theme, and Color.
+3. Prefer one of the factory themes (Industrial, Modern, Cyber) when it fits the requested aesthetic. If needed, extend the selected theme using valid CoreUI tokens such as `primary`, `surface`, `panel`, `background`, `text`, `radius`, `shadow`, and `speed`.
+4. Map application interactivity to `app:` actions. Do not invent new `ui:` actions.
+5. Keep every component `id` globally unique.
+6. Preserve unit integrity: use real CoreUI units (`px`, `%`, `*`, `auto`) and never replace them with raw strings.
+7. Emit strings and action parameters with double quotes only.
+8. If the source design implies theming, express it through top-level `Theme` blocks and `Color` entries, and select the active one with `View.theme`.
+9. When uncertain, choose the most registry-compliant representation rather than inventing unsupported attributes.
+
+Output only CoreUI DSL unless the user explicitly asks for explanation.

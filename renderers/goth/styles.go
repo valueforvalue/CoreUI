@@ -127,7 +127,7 @@ func RenderTheme(theme map[string]string) templ.Component {
 
 	keys := make([]string, 0, len(theme))
 	for key := range theme {
-		if sanitizeThemeKey(key) != "" && sanitizeCSSValue(theme[key]) != "" {
+		if sanitizeThemeKey(key) != "" && resolveThemeDefinitionValue(key, theme[key], theme) != "" {
 			keys = append(keys, key)
 		}
 	}
@@ -138,8 +138,17 @@ func RenderTheme(theme map[string]string) templ.Component {
 
 	var builder strings.Builder
 	builder.WriteString("<style>:root{")
+	if radius := resolveThemeDefinitionValue("radius", theme["radius"], theme); radius != "" {
+		builder.WriteString(fmt.Sprintf("--cui-radius:%s;", radius))
+	}
+	if shadow := resolveThemeDefinitionValue("shadow", theme["shadow"], theme); shadow != "" {
+		builder.WriteString(fmt.Sprintf("--cui-shadow:%s;", shadow))
+	}
+	if speed := resolveThemeDefinitionValue("speed", theme["speed"], theme); speed != "" {
+		builder.WriteString(fmt.Sprintf("--cui-speed:%s;", speed))
+	}
 	for _, key := range keys {
-		builder.WriteString(fmt.Sprintf("--coreui-%s:%s;", sanitizeThemeKey(key), sanitizeCSSValue(theme[key])))
+		builder.WriteString(fmt.Sprintf("--coreui-%s:%s;", sanitizeThemeKey(key), resolveThemeDefinitionValue(key, theme[key], theme)))
 	}
 	builder.WriteString("}</style>")
 	return templ.Raw(builder.String())
@@ -224,12 +233,123 @@ func resolveThemeToken(value string, theme map[string]string) string {
 	return ""
 }
 
+func resolveThemeDefinitionValue(key, value string, theme map[string]string) string {
+	if semantic := semanticTokenCSSValue(key, value); semantic != "" {
+		return semantic
+	}
+	if token := resolveThemeToken(value, theme); token != "" {
+		return token
+	}
+	return sanitizeCSSValue(value)
+}
+
 func isColorProperty(property string) bool {
 	switch property {
 	case "background", "background-color", "color", "border-color", "fill", "stroke":
 		return true
 	default:
 		return false
+	}
+}
+
+func semanticTokenCSSValue(key, value string) string {
+	switch key {
+	case "radius":
+		switch value {
+		case "none":
+			return "0"
+		case "sm":
+			return "4px"
+		case "md":
+			return "8px"
+		case "lg":
+			return "12px"
+		case "full":
+			return "9999px"
+		}
+	case "shadow":
+		switch value {
+		case "none":
+			return "none"
+		case "soft":
+			return "0 10px 30px rgba(15, 23, 42, 0.12)"
+		case "deep":
+			return "0 18px 45px rgba(15, 23, 42, 0.22)"
+		}
+	case "speed":
+		switch value {
+		case "instant":
+			return "all 0s linear"
+		case "smooth":
+			return "all 180ms ease"
+		case "lazy":
+			return "all 320ms ease"
+		}
+	}
+	return ""
+}
+
+func semanticStyleDecls(theme map[string]string, interactive bool, elevated bool) []styleDecl {
+	decls := make([]styleDecl, 0, 3)
+	if _, ok := theme["radius"]; ok {
+		decls = append(decls, styleDeclFor("border-radius", "var(--cui-radius)"))
+	}
+	if elevated {
+		if _, ok := theme["shadow"]; ok {
+			decls = append(decls, styleDeclFor("box-shadow", "var(--cui-shadow)"))
+		}
+	}
+	if interactive {
+		if _, ok := theme["speed"]; ok {
+			decls = append(decls, styleDeclFor("transition", "var(--cui-speed)"))
+		}
+	}
+	return decls
+}
+
+func variantStyleDecls(variant string, theme map[string]string) []styleDecl {
+	primary := resolveThemeToken("primary", theme)
+	text := resolveThemeToken("text", theme)
+	if text == "" {
+		text = "inherit"
+	}
+
+	switch sanitizeCSSToken(variant) {
+	case "primary":
+		if primary == "" {
+			return nil
+		}
+		return []styleDecl{
+			styleDeclFor("background", primary),
+			styleDeclFor("border-width", "1px"),
+			styleDeclFor("border-style", "solid"),
+			styleDeclFor("border-color", primary),
+			styleDeclFor("color", text),
+		}
+	case "secondary", "outline":
+		if primary == "" {
+			return nil
+		}
+		return []styleDecl{
+			styleDeclFor("background", "transparent"),
+			styleDeclFor("border-width", "1px"),
+			styleDeclFor("border-style", "solid"),
+			styleDeclFor("border-color", primary),
+			styleDeclFor("color", primary),
+		}
+	case "ghost":
+		if primary == "" {
+			return nil
+		}
+		return []styleDecl{
+			styleDeclFor("background", "transparent"),
+			styleDeclFor("border-width", "1px"),
+			styleDeclFor("border-style", "solid"),
+			styleDeclFor("border-color", "transparent"),
+			styleDeclFor("color", primary),
+		}
+	default:
+		return nil
 	}
 }
 

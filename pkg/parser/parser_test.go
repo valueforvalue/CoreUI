@@ -84,6 +84,28 @@ View(id="root") {
 	}
 }
 
+func TestParserSelectsNamedThemeFromMultipleThemeBlocks(t *testing.T) {
+	source := `
+Theme(id="Industrial") {
+  Color(key="primary", value="#2563eb")
+}
+Theme(id="Modern") {
+  Color(key="primary", value="#6366f1")
+}
+View(id="root", theme="Modern") {
+  Box(id="panel", background="primary")
+}
+`
+
+	document, err := parser.New(source).ParseDocument()
+	if err != nil {
+		t.Fatalf("parse document: %v", err)
+	}
+	if document.Theme["primary"] != "#6366f1" {
+		t.Fatalf("expected selected theme to be Modern, got %+v", document.Theme)
+	}
+}
+
 func TestParserRejectsColorOutsideTheme(t *testing.T) {
 	source := `
 View(id="root") {
