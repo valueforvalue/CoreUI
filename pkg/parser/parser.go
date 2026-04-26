@@ -374,6 +374,14 @@ func (p *Parser) validateRequiredAttributes(component string, attributes map[str
 			return diag.Newf(line, col, "missing required attribute %q on %s", key, component)
 		}
 	}
+	// Image requires either src or compressed_src as a source.
+	if component == "Image" {
+		_, hasSrc := attributes["src"]
+		_, hasCompressedSrc := attributes["compressed_src"]
+		if !hasSrc && !hasCompressedSrc {
+			return diag.New(line, col, "Image requires either \"src\" or \"compressed_src\"")
+		}
+	}
 	return nil
 }
 

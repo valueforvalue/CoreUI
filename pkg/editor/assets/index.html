@@ -662,6 +662,77 @@ function setStatus(state, msg) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Image drag-and-drop on the canvas (editor + preview panels)
+// ═══════════════════════════════════════════════════════════════════
+(function setupImageDrop() {
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const dropZone = document.getElementById('editor-panel');
+
+  dropZone.addEventListener('dragover', e => {
+    const hasImage = [...(e.dataTransfer.items || [])].some(
+      item => item.kind === 'file' && ALLOWED_TYPES.includes(item.type)
+    );
+    if (!hasImage) return;
+    e.preventDefault();
+    dropZone.style.outline = '2px dashed var(--accent)';
+    dropZone.style.outlineOffset = '-4px';
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.style.outline = '';
+    dropZone.style.outlineOffset = '';
+  });
+
+  dropZone.addEventListener('drop', async e => {
+    dropZone.style.outline = '';
+    dropZone.style.outlineOffset = '';
+
+    const files = [...(e.dataTransfer.files || [])].filter(
+      f => ALLOWED_TYPES.includes(f.type)
+    );
+    if (files.length === 0) return;
+    e.preventDefault();
+
+    for (const file of files) {
+      setStatus('ok', 'Uploading ' + file.name + '…');
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        });
+        if (!res.ok) {
+          setStatus('error', 'Upload failed: ' + res.statusText);
+          continue;
+        }
+        const { compressed_src } = await res.json();
+        const altName = file.name.replace(/\.[^.]+$/, '').replace(/[^a-z0-9_]/gi, '_');
+        const idName  = 'img_' + altName.toLowerCase();
+        const snippet =
+          `Image(id="${idName}", compressed_src="${compressed_src}", alt="${file.name}")`;
+        insertRawSnippet(snippet);
+        setStatus('ok', 'Inserted compressed image: ' + file.name);
+      } catch (err) {
+        setStatus('error', 'Upload error: ' + err.message);
+      }
+    }
+  });
+
+  function insertRawSnippet(snippet) {
+    const start  = ed.selectionStart;
+    const before = ed.value.slice(0, start);
+    const after  = ed.value.slice(ed.selectionEnd);
+    const prefix = before.length > 0 && !before.endsWith('\n') ? '\n' : '';
+    const insert = prefix + snippet + '\n';
+    ed.value = before + insert + after;
+    ed.selectionStart = ed.selectionEnd = start + insert.length;
+    ed.focus();
+    markDirty();
+    scheduleCompile(400);
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════════
 // Start
 // ═══════════════════════════════════════════════════════════════════
 init();

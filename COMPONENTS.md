@@ -1,6 +1,6 @@
 # CoreUI Components Reference
 
-**Registry Version:** 1.3.0
+**Registry Version:** 1.5.0
 **Schema Compatibility:** 1.0
 **Last Updated:** 2026-04-26
 
@@ -111,9 +111,10 @@ Graph(
 | Prop | Type | Requirement |
 | --- | --- | --- |
 | alt | String | Optional |
+| compressed_src | Base64-gzipped image | Optional |
 | hidden | Bool | Optional |
 | id | String | Required |
-| src | String | Required |
+| src | String | Optional |
 | style | String | Optional |
 | width | Unit | Optional |
 
@@ -131,6 +132,21 @@ Graph(
 | label | String | Optional |
 | style | String | Optional |
 | type | String | Optional |
+
+
+
+## Rating
+
+**HasChildren:** false
+
+| Prop | Type | Requirement |
+| --- | --- | --- |
+| hidden | Bool | Optional |
+| id | String | Required |
+| max | Int | Optional |
+| on_change | Action | Optional |
+| style | String | Optional |
+| value | Int | Optional |
 
 
 
@@ -205,3 +221,49 @@ Graph(
 
 
 
+## Plugin Development
+
+CoreUI supports external component definitions loaded from `./components/*.json` files.
+Running `corec init <project>` creates an example plugin at `./components/plugin_example.json`.
+
+### Schema Requirements
+
+Each plugin file is a JSON object with a top-level `"components"` array.  Every
+entry in that array must include at minimum a `"name"` string and an
+`"attributes"` object.
+
+Supported `"type"` values for attributes:
+
+| Type token | Description |
+| --- | --- |
+| `string` | Quoted text value |
+| `bool` | `true` / `false` literal |
+| `int` | Integer literal |
+| `unit` | Dimensional value (e.g. `20px`, `50%`, `1*`) |
+| `action` | Action expression (e.g. `app:doSomething(key="v")`) |
+| `unit_array` | Array of unit values |
+| `string_array` | Array of strings |
+
+Optional fields per attribute:
+
+- `"required": true` — the parser will reject the component if the attribute is absent.
+- `"enum": ["a", "b"]` — restrict the attribute to one of the listed string values.
+- `"doc_type": "Human label"` — overrides the type label shown in `COMPONENTS.md`.
+
+### Registry Mapping
+
+Plugin components are merged into `AllComponents()` and are therefore visible in:
+
+- The **Inspector** panel of `corec edit` (attribute editor and component palette).
+- The `/api/registry` endpoint consumed by the editor frontend.
+- The `corec context` AI-onboarding output.
+
+The `has_children` boolean maps directly to whether the component accepts a `{ }` child block in `.cui` source.
+
+### Implementation Note
+
+Plugin files define **structure and validation rules** only.  The JS renderer
+(`pkg/renderers/renderer.js`) will render unknown component types as a plain
+error-boundary box unless you extend the `renderNode` `switch` statement with a
+matching `case`.  The GOTH server renderer requires the same treatment.  Plugins
+are therefore most useful when paired with a custom renderer build.

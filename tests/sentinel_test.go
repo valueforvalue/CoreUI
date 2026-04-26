@@ -2,6 +2,8 @@ package tests
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -137,6 +139,89 @@ func TestSentinelGuardrails(t *testing.T) {
 
 		if !bytes.Equal(original, regenerated) {
 			t.Fatal("COMPONENTS.md is out of date; run `go run ./cmd/coredoc` and commit the result")
+		}
+	})
+
+	t.Run("gzipped image compiles and round-trips", func(t *testing.T) {
+		// Build a small synthetic PNG (1×1 red pixel) so the test is
+		// self-contained and does not depend on files on disk.
+		rawPNG := []byte{
+			0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+			0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+			0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+			0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
+			0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41,
+			0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
+			0x00, 0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc,
+			0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
+			0x44, 0xae, 0x42, 0x60, 0x82,
+		}
+
+		// Gzip-compress and base64-encode exactly as the backend does.
+		var buf bytes.Buffer
+		gz := gzip.NewWriter(&buf)
+		if _, err := gz.Write(rawPNG); err != nil {
+			t.Fatalf("gzip write: %v", err)
+		}
+		if err := gz.Close(); err != nil {
+			t.Fatalf("gzip close: %v", err)
+		}
+		compressedSrc := base64.StdEncoding.EncodeToString(buf.Bytes())
+
+		// Write a .cui fixture to a temp directory.
+		tempDir := t.TempDir()
+		cuiSource := `View(id="root") {
+    Image(id="gzip_img", compressed_src="` + compressedSrc + `", alt="test")
+}
+`
+		cuiPath := filepath.Join(tempDir, "gzip_test.cui")
+		if err := os.WriteFile(cuiPath, []byte(cuiSource), 0o644); err != nil {
+			t.Fatalf("write cui fixture: %v", err)
+		}
+
+		// Compile with corec — must succeed without error.
+		jsonPath := filepath.Join(tempDir, "gzip_test.json")
+		runGo(t, root, "run", "./cmd/corec", "-o", jsonPath, cuiPath)
+
+		// The compiled JSON must contain the compressed_src attribute verbatim.
+		jsonBytes, err := os.ReadFile(jsonPath)
+		if err != nil {
+			t.Fatalf("read compiled JSON: %v", err)
+		}
+		if !strings.Contains(string(jsonBytes), `"compressed_src"`) {
+			t.Fatal("compiled JSON does not contain compressed_src attribute")
+		}
+		if !strings.Contains(string(jsonBytes), compressedSrc) {
+			t.Fatal("compiled JSON does not preserve the compressed_src value")
+		}
+	})
+
+	t.Run("mock plugin component is parsed correctly", func(t *testing.T) {
+		// The repo ships components/plugin_example.json which registers the
+		// Rating component.  Compile a .cui file from the repo root (so that
+		// the registry init() picks up ./components/plugin_example.json) and
+		// verify that Rating is accepted without error.
+		tempDir := t.TempDir()
+
+		cuiSource := `View(id="root") {
+    Rating(id="stars", value=4, max=5)
+}
+`
+		cuiPath := filepath.Join(tempDir, "plugin_test.cui")
+		if err := os.WriteFile(cuiPath, []byte(cuiSource), 0o644); err != nil {
+			t.Fatalf("write cui fixture: %v", err)
+		}
+
+		// Run from the repo root so ./components/plugin_example.json is found.
+		jsonPath := filepath.Join(tempDir, "plugin_test.json")
+		runGo(t, root, "run", "./cmd/corec", "-o", jsonPath, cuiPath)
+
+		jsonBytes, err := os.ReadFile(jsonPath)
+		if err != nil {
+			t.Fatalf("read compiled JSON: %v", err)
+		}
+		if !strings.Contains(string(jsonBytes), `"Rating"`) {
+			t.Fatal("compiled JSON does not contain Rating plugin component type")
 		}
 	})
 }

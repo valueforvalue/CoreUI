@@ -87,6 +87,52 @@ CoreUI action values use the form ` + "`namespace:function(key=\"value\")`" + `.
 {{ end -}}
 
 {{ end }}
+## Plugin Development
+
+CoreUI supports external component definitions loaded from ` + "`./components/*.json`" + ` files.
+Running ` + "`corec init <project>`" + ` creates an example plugin at ` + "`./components/plugin_example.json`" + `.
+
+### Schema Requirements
+
+Each plugin file is a JSON object with a top-level ` + "`\"components\"`" + ` array.  Every
+entry in that array must include at minimum a ` + "`\"name\"`" + ` string and an
+` + "`\"attributes\"`" + ` object.
+
+Supported ` + "`\"type\"`" + ` values for attributes:
+
+| Type token | Description |
+| --- | --- |
+| ` + "`string`" + ` | Quoted text value |
+| ` + "`bool`" + ` | ` + "`true`" + ` / ` + "`false`" + ` literal |
+| ` + "`int`" + ` | Integer literal |
+| ` + "`unit`" + ` | Dimensional value (e.g. ` + "`20px`" + `, ` + "`50%`" + `, ` + "`1*`" + `) |
+| ` + "`action`" + ` | Action expression (e.g. ` + "`app:doSomething(key=\"v\")`" + `) |
+| ` + "`unit_array`" + ` | Array of unit values |
+| ` + "`string_array`" + ` | Array of strings |
+
+Optional fields per attribute:
+
+- ` + "`\"required\": true`" + ` — the parser will reject the component if the attribute is absent.
+- ` + "`\"enum\": [\"a\", \"b\"]`" + ` — restrict the attribute to one of the listed string values.
+- ` + "`\"doc_type\": \"Human label\"`" + ` — overrides the type label shown in ` + "`COMPONENTS.md`" + `.
+
+### Registry Mapping
+
+Plugin components are merged into ` + "`AllComponents()`" + ` and are therefore visible in:
+
+- The **Inspector** panel of ` + "`corec edit`" + ` (attribute editor and component palette).
+- The ` + "`/api/registry`" + ` endpoint consumed by the editor frontend.
+- The ` + "`corec context`" + ` AI-onboarding output.
+
+The ` + "`has_children`" + ` boolean maps directly to whether the component accepts a ` + "`{ }`" + ` child block in ` + "`.cui`" + ` source.
+
+### Implementation Note
+
+Plugin files define **structure and validation rules** only.  The JS renderer
+(` + "`pkg/renderers/renderer.js`" + `) will render unknown component types as a plain
+error-boundary box unless you extend the ` + "`renderNode`" + ` ` + "`switch`" + ` statement with a
+matching ` + "`case`" + `.  The GOTH server renderer requires the same treatment.  Plugins
+are therefore most useful when paired with a custom renderer build.
 `
 
 const contextTemplate = `# CoreUI Context Stream
@@ -155,6 +201,62 @@ These are the standard starter tokens used by CoreUI onboarding templates:
 ### User-defined ` + "`app:`" + ` actions
 
 Use ` + "`app:`" + ` for application-specific intent. Preserve the same structured payload shape and route execution in your own application layer.
+
+## Asset Pipeline (v1.5.0)
+
+CoreUI supports compressed image assets for portable single-file manuals.
+
+- **Drag-and-drop** ` + "`.jpg`" + `, ` + "`.png`" + `, or ` + "`.webp`" + ` files onto the ` + "`corec edit`" + ` canvas.
+- The server compresses the image with ` + "`gzip`" + ` and returns a Base64 string via ` + "`POST /api/upload`" + `.
+- The snippet ` + "`Image(id=\"…\", compressed_src=\"<base64>\")`" + ` is inserted into your ` + "`.cui`" + ` source.
+- The JS renderer inflates the data on the fly using the native ` + "`DecompressionStream(\"gzip\")`" + ` API and displays the image as a ` + "`blob:`" + ` URL.
+- Target: 40–60% file-size reduction vs. raw Base64 embedding.
+
+## Plugin Development (v1.5.0)
+
+External component definitions are loaded from ` + "`./components/*.json`" + ` at startup.
+
+### Quick-start
+
+1. Run ` + "`corec init <project>`" + ` — this creates ` + "`./components/plugin_example.json`" + ` with a sample ` + "`Rating`" + ` component.
+2. Edit the JSON to define your own components following the schema below.
+3. Restart ` + "`corec`" + ` or ` + "`corec edit`" + ` — plugins are merged automatically.
+
+### Plugin JSON schema
+
+` + "```json" + `
+{
+  "components": [
+    {
+      "name": "MyWidget",
+      "has_children": false,
+      "attributes": {
+        "id":    { "type": "string", "required": true },
+        "value": { "type": "int" },
+        "mode":  { "type": "string", "enum": ["read", "write"] }
+      }
+    }
+  ]
+}
+` + "```" + `
+
+Supported type tokens: ` + "`string`" + `, ` + "`bool`" + `, ` + "`int`" + `, ` + "`unit`" + `, ` + "`action`" + `, ` + "`unit_array`" + `, ` + "`string_array`" + `.
+
+### Renderer note
+
+Plugin files define structure and validation.  To render custom visuals you must
+extend the ` + "`renderNode`" + ` switch in ` + "`pkg/renderers/renderer.js`" + ` and the GOTH renderer.
+
+## Diagnostics (v1.5.0)
+
+Run ` + "`corec doctor`" + ` to execute a self-healing diagnostic suite:
+
+- **Registry Health** — checks for naming collisions between core and plugin components.
+- **Asset Health** — verifies the renderer JS and CSS are correctly loaded in memory.
+- **Permissions** — checks write access for the current directory and ` + "`./history`" + `.
+- **Port Availability** — verifies that the OS can bind a local TCP port for ` + "`corec edit`" + `.
+
+Each check reports ` + "`[PASS]`" + ` or ` + "`[FAIL]`" + ` with a specific remediation step on failure.
 
 ## Wiring Snippets
 
