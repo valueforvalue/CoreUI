@@ -40,6 +40,10 @@ UI components support `id` (String - Mandatory), `hidden` (Bool), and `style` (S
 
 ## 3. The Action Protocol
 Interactivity follows the format: `namespace:action(key=value)`.
+**Namespaces:**
+* `ui:` is registry-validated and reserved for built-in UI behavior.
+* `app:` is user-defined/application-specific. It accepts any function name and any key-value parameter map, while still requiring valid action syntax (`namespace:function(key="value")`).
+
 **Built-in Actions:**
 * `ui:navigate(target="id")`
 * `ui:toggle(id="target_id")`

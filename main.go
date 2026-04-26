@@ -17,6 +17,13 @@ import (
 )
 
 func main() {
+	if os.Getenv("COREUI_MODE") == "parity" {
+		if err := runParityServer(":8080"); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	node, theme, err := loadCompiledNode("kitchen_sink.json")
 	if err != nil {
 		log.Fatalf("load compiled node: %v", err)

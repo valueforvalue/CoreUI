@@ -87,6 +87,10 @@ func (p *actionParser) parse() (ast.Action, error) {
 }
 
 func validateBuiltInAction(action ast.Action) error {
+	if action.Namespace == "app" {
+		return nil
+	}
+
 	if action.Namespace != "ui" {
 		return nil
 	}
@@ -109,6 +113,16 @@ func validateBuiltInAction(action ast.Action) error {
 	case "close":
 		if len(action.Params) != 0 {
 			return fmt.Errorf("ui:close does not accept parameters")
+		}
+	case "notify":
+		if len(action.Params) != 2 {
+			return fmt.Errorf("ui:notify requires exactly two parameters")
+		}
+		if _, ok := action.Params["msg"]; !ok {
+			return fmt.Errorf("ui:notify requires msg parameter")
+		}
+		if _, ok := action.Params["type"]; !ok {
+			return fmt.Errorf("ui:notify requires type parameter")
 		}
 	default:
 		return fmt.Errorf("unsupported built-in action %q", action.Call)

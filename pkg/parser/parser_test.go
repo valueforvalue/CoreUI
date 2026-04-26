@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"coreui/pkg/ast"
 	"coreui/pkg/parser"
 )
 
@@ -96,5 +97,35 @@ View(id="root") {
 	}
 	if !strings.Contains(err.Error(), "Color must be inside Theme") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParserAcceptsNotifyAction(t *testing.T) {
+	source := `Trigger(id="notify", label="Notify", action="ui:notify(msg=\"Sync Complete\", type=\"success\")")`
+
+	_, err := parser.New(source).Parse()
+	if err != nil {
+		t.Fatalf("expected notify action to parse, got %v", err)
+	}
+}
+
+func TestParserAcceptsAppNamespaceAction(t *testing.T) {
+	source := `Trigger(id="notify", label="Notify", action="app:notify(msg=\"Sync Complete\", type=\"success\", channel=\"ops\")")`
+
+	node, err := parser.New(source).Parse()
+	if err != nil {
+		t.Fatalf("expected app namespace action to parse, got %v", err)
+	}
+
+	actionValue := node.Attributes["action"]
+	action, ok := actionValue.Data.(ast.Action)
+	if !ok {
+		t.Fatalf("expected structured action, got %#v", actionValue.Data)
+	}
+	if action.Namespace != "app" || action.Call != "notify" {
+		t.Fatalf("unexpected action: %+v", action)
+	}
+	if len(action.Params) != 3 {
+		t.Fatalf("unexpected params: %+v", action.Params)
 	}
 }

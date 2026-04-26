@@ -1,0 +1,25 @@
+Theme(id="parity_theme") {
+    Color(key="primary", value="#0984e3"),
+    Color(key="surface", value="#f5f6fa"),
+    Color(key="panel", value="#dfe6e9"),
+    Color(key="accent", value="#00b894")
+}
+
+View(id="parity_view", title="CoreUI Parity Test", style="width: 100%") {
+    Grid(id="parity_grid", cols=[1*, 250px], gap=24px) {
+        Stack(id="main_stack", dir="v", gap=18px) {
+            Stack(id="toolbar_stack", dir="h", gap=12px, align="center") {
+                Text(id="status_text", value="Renderer Parity", size=26px, weight="bold", style="color: primary")
+                Trigger(id="sync_trigger", label="Run Sync", action="app:notify(msg=\"Sync Complete\", type=\"success\")")
+            }
+            Box(id="content_box", padding=20px, background="surface", style="width: 100%") {
+                Input(id="search_input", type="text", label="Search", bind="query")
+                DataTable(id="results_table", source="results", selectable=true)
+            }
+        }
+        Box(id="sidebar_box", padding=16px, background="panel") {
+            Text(id="sidebar_title", value="Summary", size=18px, weight="bold", style="color: accent")
+            Text(id="sidebar_copy", value="Mixing px, %, and fractional units in one layout.")
+        }
+    }
+}
