@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/ast"
 	"github.com/a-h/templ"
 )
 

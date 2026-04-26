@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"coreui/pkg/docs"
+	"github.com/valueforvalue/coreui/pkg/docs"
 )
 
 func main() {

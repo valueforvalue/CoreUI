@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/ast"
 )
 
 type actionParser struct {

@@ -4,17 +4,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"coreui/pkg/compiler"
-	"coreui/pkg/docs"
-	"coreui/pkg/registry"
-	jsrenderer "coreui/renderers/js"
+	"github.com/valueforvalue/coreui/pkg/compiler"
+	"github.com/valueforvalue/coreui/pkg/docs"
+	"github.com/valueforvalue/coreui/pkg/registry"
+	"github.com/valueforvalue/coreui/pkg/renderers"
 )
 
 const version = "dev"
@@ -64,54 +63,6 @@ View(id="root", title="New CoreUI Project", theme="Modern") {
     }
 }
 `
-
-const standaloneTemplate = `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CoreUI Standalone</title>
-  <style>
-    :root {
-      color-scheme: light dark;
-    }
-    html, body {
-      margin: 0;
-      min-height: 100%;
-    }
-    body {
-      background: #f5f7fb;
-      color: #111827;
-      font-family: Arial, Helvetica, sans-serif;
-    }
-    @media (prefers-color-scheme: dark) {
-      body {
-        background: #0f172a;
-        color: #e5e7eb;
-      }
-    }
-    #coreui-root {
-      min-height: 100vh;
-    }
-  </style>
-</head>
-<body>
-  <div id="coreui-root"></div>
-  <script type="module">{{ .RendererJS }}</script>
-  <script type="module">
-    const jsonData = {{ .JSONData }};
-    document.addEventListener("DOMContentLoaded", () => {
-      new window.CoreUI(jsonData).render(document.getElementById("coreui-root"));
-    });
-  </script>
-</body>
-</html>
-`
-
-type standalonePageData struct {
-	RendererJS template.JS
-	JSONData   template.JS
-}
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "init" {
@@ -242,37 +193,11 @@ func defaultOutputPath(inputPath string, standalone bool) string {
 }
 
 func buildStandaloneHTML(jsonData []byte) ([]byte, error) {
-	tmpl, err := template.New("standalone").Parse(standaloneTemplate)
+	html, err := renderers.BuildStandaloneHTML(jsonData, nil)
 	if err != nil {
 		return nil, err
 	}
-
-	data := standalonePageData{
-		RendererJS: template.JS(escapeInlineScript(jsrenderer.Source + "\nwindow.CoreUI = CoreUI;\n")),
-		JSONData:   template.JS(escapeJSONForScript(string(jsonData))),
-	}
-
-	var builder strings.Builder
-	if err := tmpl.Execute(&builder, data); err != nil {
-		return nil, err
-	}
-
-	return []byte(builder.String()), nil
-}
-
-func escapeInlineScript(value string) string {
-	return strings.ReplaceAll(value, "</", "<\\/")
-}
-
-func escapeJSONForScript(value string) string {
-	replacer := strings.NewReplacer(
-		"<", "\\u003c",
-		">", "\\u003e",
-		"&", "\\u0026",
-		"\u2028", "\\u2028",
-		"\u2029", "\\u2029",
-	)
-	return replacer.Replace(value)
+	return []byte(html), nil
 }
 
 func findProjectFile(name string) (string, error) {

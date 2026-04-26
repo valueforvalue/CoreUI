@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"coreui/pkg/ast"
-	"coreui/pkg/generator"
-	"coreui/pkg/parser"
+	"github.com/valueforvalue/coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/generator"
+	"github.com/valueforvalue/coreui/pkg/parser"
 )
 
 type Options struct {

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/ast"
 )
 
 func TestUnitToCSS(t *testing.T) {

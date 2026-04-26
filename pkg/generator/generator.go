@@ -3,8 +3,8 @@ package generator
 import (
 	"time"
 
-	"coreui/pkg/ast"
-	"coreui/pkg/registry"
+	"github.com/valueforvalue/coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/registry"
 )
 
 type IndexEntry struct {

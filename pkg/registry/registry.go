@@ -5,13 +5,16 @@ import (
 	"sort"
 	"strings"
 
-	"coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/ast"
 )
 
 const (
-	Version             = "1.3.0"
+	// Version is the current published registry version.
+	Version = "1.3.0"
+	// SchemaCompatibility tracks the JSON schema compatibility contract.
 	SchemaCompatibility = "1.0"
-	LastUpdated         = "2026-04-26"
+	// LastUpdated records the most recent registry catalog update date.
+	LastUpdated = "2026-04-26"
 )
 
 var standardThemeTokens = []string{"primary", "surface", "panel", "background", "text", "radius", "shadow", "speed"}
@@ -29,6 +32,7 @@ var builtInActions = []string{
 	`ui:notify(msg="Done", type="success")`,
 }
 
+// FactoryTheme describes one of the starter theme bundles exposed by the registry.
 type FactoryTheme struct {
 	Name   string
 	Tokens map[string]string
@@ -76,8 +80,10 @@ var factoryThemes = []FactoryTheme{
 	},
 }
 
+// ValueType identifies the schema type an attribute accepts.
 type ValueType string
 
+// Supported attribute value kinds.
 const (
 	StringType                 ValueType = "string"
 	BoolType                   ValueType = "bool"
@@ -90,6 +96,7 @@ const (
 	ActionType                 ValueType = "action"
 )
 
+// AttributeSpec describes the validation contract for a component attribute.
 type AttributeSpec struct {
 	Type     ValueType
 	Required bool
@@ -97,6 +104,7 @@ type AttributeSpec struct {
 	DocType  string
 }
 
+// ComponentSpec describes one component entry in the CoreUI registry.
 type ComponentSpec struct {
 	Name        string
 	HasChildren bool
@@ -228,11 +236,13 @@ func enumSet(values ...string) map[string]struct{} {
 	return set
 }
 
+// GetComponent returns the registry specification for a named component.
 func GetComponent(name string) (ComponentSpec, bool) {
 	spec, ok := componentSpecs[name]
 	return spec, ok
 }
 
+// AllComponents returns a sorted snapshot of every registered component.
 func AllComponents() []ComponentSpec {
 	names := make([]string, 0, len(componentSpecs))
 	for name := range componentSpecs {
@@ -250,6 +260,7 @@ func AllComponents() []ComponentSpec {
 	return components
 }
 
+// IsAttributeAllowed reports whether attr is defined for the component.
 func IsAttributeAllowed(component, attr string) bool {
 	spec, ok := componentSpecs[component]
 	if !ok {
@@ -260,6 +271,7 @@ func IsAttributeAllowed(component, attr string) bool {
 	return ok
 }
 
+// ValidAttributes returns the sorted list of allowed attributes for a component.
 func ValidAttributes(component string) []string {
 	spec, ok := componentSpecs[component]
 	if !ok {
@@ -274,6 +286,7 @@ func ValidAttributes(component string) []string {
 	return attributes
 }
 
+// RequiredAttributes returns the required attributes for a component.
 func RequiredAttributes(component string) []string {
 	spec, ok := componentSpecs[component]
 	if !ok {
@@ -290,6 +303,7 @@ func RequiredAttributes(component string) []string {
 	return required
 }
 
+// RequiresID reports whether the component requires an id attribute.
 func RequiresID(component string) bool {
 	spec, ok := componentSpecs[component]
 	if !ok {
@@ -299,6 +313,7 @@ func RequiresID(component string) bool {
 	return ok && attribute.Required
 }
 
+// ValidateValue checks a parsed attribute value against the registry contract.
 func ValidateValue(component, attr string, value ast.Value) error {
 	spec, ok := componentSpecs[component]
 	if !ok {
@@ -406,14 +421,17 @@ func cloneAttributes(attributes map[string]AttributeSpec) map[string]AttributeSp
 	return cloned
 }
 
+// StandardThemeTokens returns the standard theme token names used by starter themes.
 func StandardThemeTokens() []string {
 	return append([]string(nil), standardThemeTokens...)
 }
 
+// BuiltInActions returns the built-in ui: action signatures.
 func BuiltInActions() []string {
 	return append([]string(nil), builtInActions...)
 }
 
+// SemanticTokens returns the allowed semantic token values by token name.
 func SemanticTokens() map[string][]string {
 	cloned := make(map[string][]string, len(semanticTokens))
 	for key, values := range semanticTokens {
@@ -422,6 +440,7 @@ func SemanticTokens() map[string][]string {
 	return cloned
 }
 
+// FactoryThemes returns cloned starter theme definitions.
 func FactoryThemes() []FactoryTheme {
 	cloned := make([]FactoryTheme, 0, len(factoryThemes))
 	for _, theme := range factoryThemes {

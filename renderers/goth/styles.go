@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/ast"
 	"github.com/a-h/templ"
 )
 

@@ -1,6 +1,8 @@
 /**
  * Vanilla JS renderer for CoreUI compiler output.
  */
+const baseStyles = "__COREUI_BASE_CSS__";
+
 export class CoreUI {
   /**
    * @param {object} output - Parsed JSON output from corec.
@@ -68,27 +70,16 @@ export class CoreUI {
         }
       });
 
-    style.textContent = `
+    style.textContent = [
+      baseStyles,
+      `
 :host {
   display: block;
   font-family: Arial, Helvetica, sans-serif;
   ${declarations.join("\n  ")}
 }
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-section, div, span, button, input, img, table, caption, tbody, tr, td, th {
-  font: inherit;
-}
-[data-coreui-error] {
-  border: 1px solid #ef4444;
-  background: #fef2f2;
-  color: #991b1b;
-  padding: 0.75rem;
-  border-radius: 6px;
-  font-family: monospace;
-}
-`;
+`,
+    ].join("\n\n");
 
     return style;
   }

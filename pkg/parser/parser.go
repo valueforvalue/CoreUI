@@ -6,11 +6,11 @@ import (
 	"strings"
 	"unicode"
 
-	"coreui/pkg/ast"
-	"coreui/pkg/diag"
-	"coreui/pkg/lexer"
-	"coreui/pkg/registry"
-	"coreui/pkg/utils"
+	"github.com/valueforvalue/coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/diag"
+	"github.com/valueforvalue/coreui/pkg/lexer"
+	"github.com/valueforvalue/coreui/pkg/registry"
+	"github.com/valueforvalue/coreui/pkg/utils"
 )
 
 type Parser struct {

@@ -73,10 +73,10 @@ Important contract details:
 | `pkg\lexer` | Tokenization and unit lexing |
 | `pkg\parser` | Recursive-descent parsing, validation, action parsing, ID tracking |
 | `pkg\registry` | Source of truth for components, attributes, types, enums, and themes |
+| `pkg\renderers` | Embedded browser renderer assets and standalone HTML helpers |
 | `pkg\generator` | Converts AST into deterministic JSON |
 | `pkg\compiler` | Wires parsing and generation for tests and CLI use |
 | `renderers\goth` | Static/server renderer |
-| `renderers\js` | Browser renderer |
 | `testdata` | Golden compiler fixtures |
 | `tests` | Sentinel and end-to-end checks |
 | `release` | Packaged docs, prompt files, and distribution artifacts |
@@ -89,12 +89,18 @@ Important contract details:
 
 The compiler core stays lightweight and standard-library focused. The GOTH renderer uses `github.com/a-h/templ`.
 
+## Quick Install
+
+```powershell
+go get github.com/valueforvalue/coreui
+```
+
 ## Getting started
 
 ### 1. Clone and build
 
 ```powershell
-git clone https://github.com/valueforvalue/CoreUI.git
+git clone https://github.com/valueforvalue/coreui.git
 Set-Location CoreUI
 go test ./...
 go build ./cmd/corec

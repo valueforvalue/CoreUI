@@ -5,7 +5,7 @@ import (
 	"strings"
 	"text/template"
 
-	"coreui/pkg/registry"
+	"github.com/valueforvalue/coreui/pkg/registry"
 )
 
 type AttributeDoc struct {

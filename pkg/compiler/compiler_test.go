@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"coreui/pkg/compiler"
+	"github.com/valueforvalue/coreui/pkg/compiler"
 )
 
 func TestGoldenFiles(t *testing.T) {

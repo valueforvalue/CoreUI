@@ -12,7 +12,7 @@ import (
     "encoding/json"
     "net/http"
 
-    "coreui/renderers/goth"
+    "github.com/valueforvalue/coreui/renderers/goth"
 )
 
 func main() {

@@ -4,6 +4,13 @@ set -eu
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT_DIR"
 
+EXPECTED_MODULE="github.com/valueforvalue/coreui"
+MODULE_PATH=$(go list -m)
+if [ "$MODULE_PATH" != "$EXPECTED_MODULE" ]; then
+  echo "expected module path $EXPECTED_MODULE, got $MODULE_PATH" >&2
+  exit 1
+fi
+
 VERSION=$(grep -E '^[[:space:]]*Version[[:space:]]*=' pkg/registry/registry.go | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/')
 if [ -z "$VERSION" ]; then
   echo "failed to determine registry version" >&2
@@ -51,6 +58,8 @@ done
 go run ./cmd/corec context > "$CONTEXT_PATH"
 
 cp COMPONENTS.md "$STAGE_DIR/"
+cp LICENSE "$STAGE_DIR/"
+cp README.md "$STAGE_DIR/"
 cp release/WIRING.md "$STAGE_DIR/"
 cp release/templates/SYSTEM_PROMPT.txt "$STAGE_DIR/"
 cp "$CONTEXT_PATH" "$STAGE_DIR/"

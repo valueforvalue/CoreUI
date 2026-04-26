@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"coreui/pkg/compiler"
+	"github.com/valueforvalue/coreui/pkg/compiler"
 )
 
 func TestRunInitCreatesTemplateAndInstructions(t *testing.T) {

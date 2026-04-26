@@ -1,4 +1,4 @@
-module coreui
+module github.com/valueforvalue/coreui
 
 go 1.26.1
 

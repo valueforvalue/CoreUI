@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"coreui/pkg/ast"
-	"coreui/pkg/parser"
+	"github.com/valueforvalue/coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/parser"
 )
 
 func TestParserRejectsDuplicateIDs(t *testing.T) {
