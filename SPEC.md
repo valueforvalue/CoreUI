@@ -11,6 +11,14 @@
 <unit>       ::= <number> ("px" | "%" | "*" | "auto")
 <action_val> ::= <namespace> ":" <call> [ "(" <param_list> ")" ]
 
+### Syntax Rules
+1. **Bare Units in Arrays:** Units inside arrays such as `cols` or `rows` must not be quoted.
+   * Correct: `cols=[1*, 200px]`
+   * Incorrect: `cols=["1*", "200px"]`
+2. **Double-Quote Totality:** All strings and action parameters must use double quotes (`"`) to maintain parity with Go and JSON standards.
+   * Correct: `action="ui:navigate(target=\"settings\")"`
+   * Note: CLI AI clients should handle escaping internal quotes automatically.
+
 ## 2. Component Registry
 Every component must support `id` (String - Mandatory), `hidden` (Bool), and `style` (String).
 
@@ -28,8 +36,8 @@ Every component must support `id` (String - Mandatory), `hidden` (Bool), and `st
 ## 3. The Action Protocol
 Interactivity follows the format: `namespace:action(key=value)`.
 **Built-in Actions:**
-* `ui:navigate(target=id)`
-* `ui:toggle(id=target_id)`
+* `ui:navigate(target="id")`
+* `ui:toggle(id="target_id")`
 * `ui:close()`
 
 ## 4. JSON Output Contract

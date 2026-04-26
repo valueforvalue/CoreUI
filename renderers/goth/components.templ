@@ -1,0 +1,80 @@
+package goth
+
+templ viewComponent(id string, title string, style string, children []templ.Component) {
+	<section id={ id } style={ style } data-coreui-type="View">
+		if title != "" {
+			<header>
+				<h1>{ title }</h1>
+			</header>
+		}
+		for _, child := range children {
+			@child
+		}
+	</section>
+}
+
+templ stackComponent(id string, style string, children []templ.Component) {
+	<div id={ id } style={ style } data-coreui-type="Stack">
+		for _, child := range children {
+			@child
+		}
+	</div>
+}
+
+templ gridComponent(id string, style string, children []templ.Component) {
+	<div id={ id } style={ style } data-coreui-type="Grid">
+		for _, child := range children {
+			@child
+		}
+	</div>
+}
+
+templ boxComponent(id string, style string, children []templ.Component) {
+	<div id={ id } style={ style } data-coreui-type="Box">
+		for _, child := range children {
+			@child
+		}
+	</div>
+}
+
+templ textComponent(id string, value string, style string) {
+	<span id={ id } style={ style } data-coreui-type="Text">{ value }</span>
+}
+
+templ inputComponent(id string, label string, bind string, inputType string, style string) {
+	<div data-coreui-type="Input">
+		if label != "" {
+			<label for={ id }>{ label }</label>
+		}
+		<input id={ id } name={ bind } type={ inputType } style={ style }/>
+	</div>
+}
+
+templ triggerComponent(id string, label string, variant string, hxVals string, style string) {
+	<button id={ id } type="button" data-coreui-type="Trigger" data-coreui-variant={ variant } style={ style } hx-post="/coreui/action" hx-target="#main-content" hx-vals={ hxVals }>
+		{ label }
+	</button>
+}
+
+templ dataTableComponent(id string, source string, selectable bool, style string, children []templ.Component) {
+	<div id={ id } style={ style } data-coreui-type="DataTable" data-coreui-selectable?={ selectable }>
+		<table>
+			if source != "" {
+				<caption>{ source }</caption>
+			}
+			<tbody></tbody>
+		</table>
+		for _, child := range children {
+			@child
+		}
+	</div>
+}
+
+templ unknownComponent(id string, nodeType string, style string, children []templ.Component) {
+	<div id={ id } style={ style } data-coreui-type={ nodeType }>
+		for _, child := range children {
+			@child
+		}
+	</div>
+}
+
