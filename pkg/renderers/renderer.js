@@ -142,6 +142,27 @@ export class CoreUI {
         console.warn(`CoreUI: plugin component "${String(type)}" has no dedicated renderer — rendering as plugin container.`);
         element = document.createElement("div");
         element.dataset.coreuiPlugin = String(type);
+        // Inflate data-cui-* attributes from the JSON node attributes so that
+        // custom client-side components can read their state from the DOM.
+        if (node.attributes && typeof node.attributes === "object") {
+          Object.keys(node.attributes).forEach((key) => {
+            const safeKey = String(key).replace(/[^a-z0-9_-]/gi, "").toLowerCase();
+            if (!safeKey || safeKey === "id") {
+              return;
+            }
+            const raw = node.attributes[key];
+            let val;
+            if (raw === null || raw === undefined) {
+              return;
+            } else if (typeof raw === "object") {
+              // Action or array — serialise to JSON for the data attribute.
+              val = JSON.stringify(raw);
+            } else {
+              val = String(raw);
+            }
+            element.dataset[`cui_${safeKey}`] = val;
+          });
+        }
     }
 
     this.decorateElement(element, node);

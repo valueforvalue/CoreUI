@@ -247,16 +247,56 @@ Supported type tokens: ` + "`string`" + `, ` + "`bool`" + `, ` + "`int`" + `, ` 
 Plugin files define structure and validation.  To render custom visuals you must
 extend the ` + "`renderNode`" + ` switch in ` + "`pkg/renderers/renderer.js`" + ` and the GOTH renderer.
 
+### Plugin Lifecycle
+
+1. **Define** – Add a ` + "`*.json`" + ` file to ` + "`./components/`" + `.
+2. **Startup** – Registry merges plugin definitions; Core-First collision guard rejects any plugin that shadows a core component.
+3. **Parse** – The ` + "`.cui`" + ` parser validates plugin attributes against the merged registry.
+4. **Render (server)** – GOTH renderer emits ` + "`data-coreui-plugin`" + ` and ` + "`data-cui-{attr}`" + ` HTML attributes via ` + "`ast.Value.ToDSLString()`" + `.
+5. **Render (client)** – JS renderer sets ` + "`element.dataset.cui_{attr}`" + ` entries during hydration.
+6. **Inspect** – Plugin components appear in ` + "`corec edit`" + ` Inspector and ` + "`GET /api/registry`" + `.
+
 ## Diagnostics (v1.5.0)
 
 Run ` + "`corec doctor`" + ` to execute a self-healing diagnostic suite:
 
 - **Registry Health** — checks for naming collisions between core and plugin components.
+- **Marshalling Round-Trip** — verifies ` + "`ast.Value.ToDSLString()`" + ` produces correct output for all primitive types.
 - **Asset Health** — verifies the renderer JS and CSS are correctly loaded in memory.
 - **Permissions** — checks write access for the current directory and ` + "`./history`" + `.
 - **Port Availability** — verifies that the OS can bind a local TCP port for ` + "`corec edit`" + `.
 
 Each check reports ` + "`[PASS]`" + ` or ` + "`[FAIL]`" + ` with a specific remediation step on failure.
+
+## Attribute Marshalling (v1.5.0)
+
+Every attribute value implements ` + "`registry.DSLStringer`" + ` via ` + "`ast.Value.ToDSLString()`" + `.
+
+### DSLStringer Interface
+
+` + "```go" + `
+type DSLStringer interface {
+    ToDSLString() string
+}
+` + "```" + `
+
+### ToDSLString() Output
+
+| Kind | .cui source | ToDSLString() output |
+| --- | --- | --- |
+| string | ` + "`label=\"hello\"`" + ` | ` + "`hello`" + ` |
+| bool | ` + "`hidden=true`" + ` | ` + "`true`" + ` |
+| int | ` + "`value=42`" + ` | ` + "`42`" + ` |
+| unit | ` + "`gap=20px`" + ` | ` + "`20px`" + ` |
+| action (no params) | ` + "`action=app:save`" + ` | ` + "`app:save`" + ` |
+| action (with params) | ` + "`action=ui:notify(msg=\"Done\", type=\"success\")`" + ` | ` + "`ui:notify(msg=\"Done\", type=\"success\")`" + ` |
+| array | ` + "`labels=[\"a\",\"b\"]`" + ` | ` + "`[\"a\", \"b\"]`" + ` |
+
+String values do **not** include outer quotes; the caller wraps them for ` + "`.cui`" + ` source output.
+
+### POST /api/save
+
+` + "`POST /api/save`" + ` in ` + "`corec edit`" + ` accepts a JSON-encoded ` + "`generator.Output`" + ` body, marshals it back to ` + "`.cui`" + ` source via ` + "`generator.MarshalDSL()`" + ` (which calls ` + "`ToDSLString()`" + ` for each attribute), validates by re-compiling, then writes the file.
 
 ## Wiring Snippets
 

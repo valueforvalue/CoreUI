@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/valueforvalue/coreui/pkg/ast"
 	"github.com/valueforvalue/coreui/pkg/compiler"
 	"github.com/valueforvalue/coreui/pkg/docs"
 	"github.com/valueforvalue/coreui/pkg/editor"
@@ -67,6 +68,66 @@ View(id="root", title="New CoreUI Project", theme="Modern") {
         Trigger(id="notify_button", label="Click Me", variant="primary", action="app:notify(msg=\"Hello from CoreUI!\")")
     }
 }
+`
+
+const componentsReadme = `# CoreUI Plugin Components
+
+This directory contains JSON plugin definition files loaded automatically by CoreUI.
+
+## Quick Start
+
+Each ` + "`" + `.json` + "`" + ` file must follow the plugin schema:
+
+` + "```json" + `
+{
+  "components": [
+    {
+      "name": "MyWidget",
+      "has_children": false,
+      "attributes": {
+        "id":    { "type": "string", "required": true },
+        "value": { "type": "int" },
+        "mode":  { "type": "string", "enum": ["read", "write"] }
+      }
+    }
+  ]
+}
+` + "```" + `
+
+## Supported Attribute Types
+
+| Type          | DSL Example         |
+|---------------|---------------------|
+| ` + "`string`" + `      | ` + "`label=\"hello\"`" + `  |
+| ` + "`bool`" + `        | ` + "`hidden=true`" + `      |
+| ` + "`int`" + `         | ` + "`value=5`" + `          |
+| ` + "`unit`" + `        | ` + "`gap=20px`" + `         |
+| ` + "`action`" + `      | ` + "`on_change=app:fn()`" + ` |
+| ` + "`unit_array`" + `  | ` + "`cols=[1*, 2*]`" + `     |
+| ` + "`string_array`" + `| ` + "`labels=[\"a\",\"b\"]`" + ` |
+
+## Plugin Lifecycle
+
+1. Place ` + "`" + `*.json` + "`" + ` files in this directory.
+2. Start ` + "`corec edit`" + ` or ` + "`go build ./cmd/corec`" + ` — plugins are merged at startup.
+3. Use the component name in ` + "`.cui`" + ` source files.
+4. Extend the ` + "`renderNode`" + ` switch in ` + "`pkg/renderers/renderer.js`" + ` to render custom visuals.
+
+## Attribute Marshalling (DSLStringer)
+
+Every ` + "`ast.Value`" + ` implements ` + "`registry.DSLStringer`" + ` via its ` + "`ToDSLString()`" + ` method.
+The method returns the canonical DSL token for the value:
+
+- **string** → raw value (caller wraps in ` + "`\"...\"`" + ` for source output)
+- **bool** → ` + "`true`" + ` / ` + "`false`" + `
+- **int** → decimal integer string
+- **unit** → e.g. ` + "`20px`" + `, ` + "`50%`" + `, ` + "`1*`" + `
+- **action** → e.g. ` + "`app:save`" + `, ` + "`ui:notify(msg=\"Done\", type=\"success\")`" + `
+- **array** → e.g. ` + "`[\"a\", \"b\"]`" + `, ` + "`[1*, 2*]`" + `
+
+The GOTH server renderer populates ` + "`data-cui-{attr}`" + ` HTML attributes on plugin
+component elements by calling ` + "`ToDSLString()`" + ` on each attribute value.
+The JS renderer inflates these into the element's dataset during client-side hydration.
 `
 
 func main() {
@@ -172,6 +233,10 @@ func runInit(args []string, stdout io.Writer) error {
 		if _, statErr := os.Stat(examplePath); errors.Is(statErr, os.ErrNotExist) {
 			_ = os.WriteFile(examplePath, []byte(registry.PluginExampleContent), 0o644)
 		}
+		readmePath := filepath.Join("components", "README.md")
+		if _, statErr := os.Stat(readmePath); errors.Is(statErr, os.ErrNotExist) {
+			_ = os.WriteFile(readmePath, []byte(componentsReadme), 0o644)
+		}
 	}
 
 	fmt.Fprintf(stdout, "[Success] Initialized '%s'\n\nQuick Start:\n1. Edit '%s' to design your UI.\n2. Run 'corec -s %s' to bundle it.\n3. Open '%s' in any browser.\n", fileName, fileName, fileName, defaultOutputPath(fileName, true))
@@ -218,6 +283,42 @@ func runDoctor(stdout io.Writer) error {
 					"Plugin components shadow core names: %s\n  Remediation: rename the plugin components in ./components/*.json.",
 					strings.Join(collisions, ", "),
 				)
+			},
+		},
+		{
+			name: "Marshalling Round-Trip (DSLStringer correctness)",
+			run: func() (bool, string) {
+				type rtCase struct {
+					value    ast.Value
+					expected string
+				}
+				cases := []rtCase{
+					{ast.Value{Kind: ast.StringKind, Data: "hello"}, "hello"},
+					{ast.Value{Kind: ast.BoolKind, Data: true}, "true"},
+					{ast.Value{Kind: ast.BoolKind, Data: false}, "false"},
+					{ast.Value{Kind: ast.IntKind, Data: int64(42)}, "42"},
+					{ast.Value{Kind: ast.UnitKind, Data: "20px"}, "20px"},
+					{ast.Value{Kind: ast.UnitKind, Data: "50%"}, "50%"},
+					{ast.Value{Kind: ast.ActionKind, Data: ast.Action{Namespace: "app", Call: "save", Params: map[string]ast.Value{}}}, "app:save"},
+					{ast.Value{Kind: ast.ActionKind, Data: ast.Action{
+						Namespace: "ui",
+						Call:      "notify",
+						Params: map[string]ast.Value{
+							"msg":  {Kind: ast.StringKind, Data: "Done"},
+							"type": {Kind: ast.StringKind, Data: "success"},
+						},
+					}}, `ui:notify(msg="Done", type="success")`},
+				}
+				for _, c := range cases {
+					got := c.value.ToDSLString()
+					if got != c.expected {
+						return false, fmt.Sprintf(
+							"DSLStringer round-trip FAILED: ToDSLString() returned %q, want %q\n  Remediation: ensure pkg/ast ToDSLString() is up-to-date and `go build ./...` succeeds.",
+							got, c.expected,
+						)
+					}
+				}
+				return true, fmt.Sprintf("All %d DSLStringer round-trip cases passed.", len(cases))
 			},
 		},
 		{

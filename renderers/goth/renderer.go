@@ -1,6 +1,11 @@
 package goth
 
 import (
+	"context"
+	"fmt"
+	"html"
+	"io"
+	"sort"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -164,7 +169,7 @@ func renderNode(node *ast.Node, theme map[string]string) templ.Component {
 		)
 	default:
 		if registry.IsPluginComponent(node.Type) {
-			return pluginComponent(id, node.Type, baseStyle(node, theme), children)
+			return pluginComponentWithCUIAttrs(id, node.Type, baseStyle(node, theme), pluginCUIAttrs(node), children)
 		}
 		return unknownComponent(id, node.Type, baseStyle(node, theme), children)
 	}
@@ -359,4 +364,95 @@ func graphRadiusValue(theme map[string]string) string {
 		return radius
 	}
 	return "8px"
+}
+
+// pluginCUIAttrs builds a map of data-cui-* attribute values for a plugin
+// component node.  Each attribute value is serialised via ast.Value.ToDSLString()
+// so that the resulting HTML attributes carry the canonical DSL representation.
+// The id attribute is excluded (it is already emitted as the element's id).
+func pluginCUIAttrs(node *ast.Node) map[string]string {
+	if node == nil || len(node.Attributes) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(node.Attributes))
+	for k, v := range node.Attributes {
+		if k == "id" {
+			continue
+		}
+		out[k] = v.ToDSLString()
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// pluginComponentWithCUIAttrs renders a plugin component as a <div> with
+// data-coreui-plugin and data-cui-{attr} HTML attributes populated from the
+// provided cuiAttrs map.  This is a pure-Go templ.Component so that dynamic
+// attribute names (which templ templates do not support directly) can be emitted
+// safely.
+func pluginComponentWithCUIAttrs(id, pluginType, style string, cuiAttrs map[string]string, children []templ.Component) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		var b strings.Builder
+		b.WriteString("<div")
+		if id != "" {
+			b.WriteString(` id="`)
+			b.WriteString(html.EscapeString(id))
+			b.WriteByte('"')
+		}
+		if style != "" {
+			b.WriteString(` style="`)
+			b.WriteString(html.EscapeString(style))
+			b.WriteByte('"')
+		}
+		b.WriteString(` data-coreui-plugin="`)
+		b.WriteString(html.EscapeString(pluginType))
+		b.WriteByte('"')
+
+		// Emit sorted data-cui-* attributes for deterministic output.
+		if len(cuiAttrs) > 0 {
+			keys := make([]string, 0, len(cuiAttrs))
+			for k := range cuiAttrs {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				safeKey := sanitizeCUIAttrKey(k)
+				if safeKey == "" {
+					continue
+				}
+				b.WriteString(` data-cui-`)
+				b.WriteString(safeKey)
+				b.WriteString(`="`)
+				b.WriteString(html.EscapeString(cuiAttrs[k]))
+				b.WriteByte('"')
+			}
+		}
+
+		b.WriteByte('>')
+		if _, err := fmt.Fprint(w, b.String()); err != nil {
+			return err
+		}
+
+		for _, child := range children {
+			if err := child.Render(ctx, w); err != nil {
+				return err
+			}
+		}
+		_, err := fmt.Fprint(w, "</div>")
+		return err
+	})
+}
+
+// sanitizeCUIAttrKey returns a lower-case, alphanumeric+hyphen+underscore copy
+// of key suitable for use as a data-cui-* HTML attribute name suffix.
+func sanitizeCUIAttrKey(key string) string {
+	var b strings.Builder
+	for _, ch := range strings.ToLower(key) {
+		if (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_' {
+			b.WriteRune(ch)
+		}
+	}
+	return b.String()
 }
