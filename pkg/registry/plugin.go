@@ -22,6 +22,7 @@ type pluginAttributeSpec struct {
 type pluginComponentSpec struct {
 	Name        string                         `json:"name"`
 	HasChildren bool                           `json:"has_children,omitempty"`
+	Intent      string                         `json:"intent,omitempty"`
 	Attributes  map[string]pluginAttributeSpec `json:"attributes"`
 }
 
@@ -129,6 +130,7 @@ func convertPluginComponent(pc pluginComponentSpec) ComponentSpec {
 	return ComponentSpec{
 		Name:        pc.Name,
 		HasChildren: pc.HasChildren,
+		Intent:      pc.Intent,
 		Attributes:  attrs,
 	}
 }

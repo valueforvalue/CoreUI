@@ -1,8 +1,8 @@
 # CoreUI Components Reference
 
-**Registry Version:** 1.5.0
+**Registry Version:** 1.6.0
 **Schema Compatibility:** 1.0
-**Last Updated:** 2026-04-26
+**Last Updated:** 2026-04-27
 
 ## Global Actions
 
