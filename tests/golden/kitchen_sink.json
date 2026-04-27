@@ -2,6 +2,7 @@
   "tree": {
     "type": "View",
     "id": "main_view",
+    "intent": "layout-root",
     "attributes": {
       "title": "CoreUI Kitchen Sink"
     },
@@ -9,6 +10,7 @@
       {
         "type": "Stack",
         "id": "main_v_stack",
+        "intent": "layout-container",
         "attributes": {
           "dir": "v",
           "gap": "24px"
@@ -17,6 +19,7 @@
           {
             "type": "Stack",
             "id": "header_h_stack",
+            "intent": "layout-container",
             "attributes": {
               "align": "center",
               "dir": "h",
@@ -26,6 +29,7 @@
               {
                 "type": "Text",
                 "id": "page_title",
+                "intent": "data-label",
                 "attributes": {
                   "size": "28px",
                   "style": "color: primary",
@@ -36,6 +40,7 @@
               {
                 "type": "Trigger",
                 "id": "export_csv_button",
+                "intent": "action-trigger",
                 "attributes": {
                   "action": {
                     "call": "export",
@@ -53,6 +58,7 @@
           {
             "type": "Grid",
             "id": "content_grid",
+            "intent": "layout-container",
             "attributes": {
               "cols": [
                 "1*",
@@ -64,6 +70,7 @@
               {
                 "type": "Box",
                 "id": "primary_panel",
+                "intent": "layout-container",
                 "attributes": {
                   "background": "surface",
                   "padding": "20px"
@@ -72,6 +79,7 @@
                   {
                     "type": "Text",
                     "id": "primary_heading",
+                    "intent": "data-label",
                     "attributes": {
                       "size": "20px",
                       "value": "Primary Content",
@@ -81,6 +89,7 @@
                   {
                     "type": "Graph",
                     "id": "traffic_graph",
+                    "intent": "data-display",
                     "attributes": {
                       "color": "primary",
                       "data": [
@@ -102,6 +111,7 @@
                   {
                     "type": "Image",
                     "id": "hero_image",
+                    "intent": "data-display",
                     "attributes": {
                       "alt": "CoreUI logo",
                       "src": "coreui-logo.svg",
@@ -111,6 +121,7 @@
                   {
                     "type": "Stack",
                     "id": "form_stack",
+                    "intent": "layout-container",
                     "attributes": {
                       "dir": "v",
                       "gap": "12px"
@@ -119,6 +130,7 @@
                       {
                         "type": "Input",
                         "id": "search_input",
+                        "intent": "data-entry",
                         "attributes": {
                           "bind": "query",
                           "label": "Search",
@@ -128,6 +140,7 @@
                       {
                         "type": "Text",
                         "id": "helper_text",
+                        "intent": "data-label",
                         "attributes": {
                           "style": "color: primary",
                           "value": "Use the filters in the sidebar to narrow the data."
@@ -140,6 +153,7 @@
               {
                 "type": "Box",
                 "id": "sidebar_panel",
+                "intent": "layout-container",
                 "attributes": {
                   "background": "sidebar",
                   "padding": "20px"
@@ -148,6 +162,7 @@
                   {
                     "type": "Stack",
                     "id": "sidebar_v_stack",
+                    "intent": "layout-container",
                     "attributes": {
                       "dir": "v",
                       "gap": "12px"
@@ -156,6 +171,7 @@
                       {
                         "type": "Text",
                         "id": "sidebar_heading",
+                        "intent": "data-label",
                         "attributes": {
                           "size": "18px",
                           "value": "Filters",
@@ -165,6 +181,7 @@
                       {
                         "type": "Trigger",
                         "id": "refresh_button",
+                        "intent": "action-trigger",
                         "attributes": {
                           "action": {
                             "call": "refresh",
@@ -263,8 +280,8 @@
     "surface": "#1e1e1e"
   },
   "metadata": {
-    "compiled_at": "2026-04-26T07:24:56Z",
+    "compiled_at": "2026-04-27T01:24:12Z",
     "version": "dev",
-    "registry_version": "1.5.0"
+    "registry_version": "1.6.0"
   }
 }

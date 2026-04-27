@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/valueforvalue/coreui/pkg/ast"
 	"github.com/valueforvalue/coreui/pkg/compiler"
+	"github.com/valueforvalue/coreui/pkg/diag"
 	"github.com/valueforvalue/coreui/pkg/docs"
 	"github.com/valueforvalue/coreui/pkg/editor"
 	"github.com/valueforvalue/coreui/pkg/registry"
@@ -152,6 +154,13 @@ func main() {
 		}
 		return
 	}
+	if len(os.Args) > 1 && os.Args[1] == "explain" {
+		if err := runExplain(os.Stdout); err != nil {
+			log.SetFlags(0)
+			log.Fatalf("%s", err.Error())
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "edit" {
 		if err := runEdit(os.Args[2:]); err != nil {
 			log.SetFlags(0)
@@ -163,11 +172,13 @@ func main() {
 	var outputPath string
 	var showVersion bool
 	var standalone bool
+	var jsonErrors bool
 
 	flag.StringVar(&outputPath, "o", "", "output JSON path")
 	flag.BoolVar(&standalone, "standalone", false, "write standalone HTML output")
 	flag.BoolVar(&standalone, "s", false, "write standalone HTML output")
 	flag.BoolVar(&showVersion, "version", false, "print version")
+	flag.BoolVar(&jsonErrors, "json-errors", false, "emit structured JSON error object to stderr on compile failure")
 	flag.Parse()
 
 	if showVersion {
@@ -176,7 +187,7 @@ func main() {
 	}
 
 	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec doctor | corec context | corec edit <file.cui> | corec [-standalone] [-o output.{json|html}] input.cui")
+		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec doctor | corec context | corec explain | corec edit <file.cui> | corec [-standalone] [-json-errors] [-o output.{json|html}] input.cui")
 		os.Exit(1)
 	}
 
@@ -187,7 +198,12 @@ func main() {
 
 	data, err := compiler.CompileFile(inputPath, compiler.Options{Version: version, Standalone: standalone})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		if jsonErrors {
+			source, _ := os.ReadFile(inputPath)
+			writeJSONErrors(os.Stderr, err, string(source))
+		} else {
+			fmt.Fprintln(os.Stderr, err.Error())
+		}
 		os.Exit(1)
 	}
 
@@ -463,4 +479,150 @@ func runEdit(args []string) error {
 	}()
 
 	return editor.New(filePath).Run(ctx)
+}
+
+// jsonErrorEntry is a single structured error entry for --json-errors output.
+type jsonErrorEntry struct {
+	Line           int    `json:"line"`
+	Column         int    `json:"column"`
+	ErrorCode      string `json:"error_code"`
+	Message        string `json:"message"`
+	Expected       string `json:"expected,omitempty"`
+	ContextSnippet string `json:"context_snippet,omitempty"`
+}
+
+// jsonErrorResponse is the top-level --json-errors response envelope.
+type jsonErrorResponse struct {
+	Status string           `json:"status"`
+	Errors []jsonErrorEntry `json:"errors"`
+}
+
+// writeJSONErrors writes a machine-readable JSON error object to w. It extracts
+// structured diagnostic information from err (which may be a *diag.Error) and
+// includes the offending source line as context_snippet when available.
+func writeJSONErrors(w io.Writer, err error, source string) {
+	lines := strings.Split(source, "\n")
+	entries := collectErrorEntries(err, lines)
+	resp := jsonErrorResponse{
+		Status: "error",
+		Errors: entries,
+	}
+	data, _ := json.MarshalIndent(resp, "", "  ")
+	fmt.Fprintln(w, string(data))
+}
+
+func collectErrorEntries(err error, sourceLines []string) []jsonErrorEntry {
+	if err == nil {
+		return nil
+	}
+	var de *diag.Error
+	if errors.As(err, &de) {
+		return []jsonErrorEntry{diagToEntry(de, sourceLines)}
+	}
+	return []jsonErrorEntry{{
+		Line:      0,
+		Column:    0,
+		ErrorCode: "COMPILE_ERROR",
+		Message:   err.Error(),
+	}}
+}
+
+func diagToEntry(de *diag.Error, sourceLines []string) jsonErrorEntry {
+	entry := jsonErrorEntry{
+		Line:      de.Line,
+		Column:    de.Col,
+		ErrorCode: classifyError(de.Message),
+		Message:   de.Message,
+	}
+
+	entry.Expected = inferExpected(de.Message)
+
+	if de.Line > 0 && de.Line <= len(sourceLines) {
+		entry.ContextSnippet = sourceLines[de.Line-1]
+	}
+
+	return entry
+}
+
+// classifyError maps a human-readable error message to a machine-readable error code.
+func classifyError(message string) string {
+	msg := strings.ToLower(message)
+	switch {
+	case strings.Contains(msg, "unknown attribute"):
+		return "UNKNOWN_ATTRIBUTE"
+	case strings.Contains(msg, "unknown component"):
+		return "UNKNOWN_COMPONENT"
+	case strings.Contains(msg, "duplicate") && strings.Contains(msg, "id"):
+		return "DUPLICATE_ID"
+	case strings.Contains(msg, "duplicate attribute"):
+		return "DUPLICATE_ATTRIBUTE"
+	case strings.Contains(msg, "missing required"):
+		return "MISSING_REQUIRED_ATTRIBUTE"
+	case strings.Contains(msg, "expects string"):
+		return "INVALID_ATTRIBUTE_TYPE"
+	case strings.Contains(msg, "expects bool"):
+		return "INVALID_ATTRIBUTE_TYPE"
+	case strings.Contains(msg, "expects int"):
+		return "INVALID_ATTRIBUTE_TYPE"
+	case strings.Contains(msg, "expects unit"):
+		return "INVALID_ATTRIBUTE_TYPE"
+	case strings.Contains(msg, "expects action"):
+		return "INVALID_ATTRIBUTE_TYPE"
+	case strings.Contains(msg, "expects array"):
+		return "INVALID_ATTRIBUTE_TYPE"
+	case strings.Contains(msg, "does not allow value"):
+		return "INVALID_ENUM_VALUE"
+	case strings.Contains(msg, "does not accept children"):
+		return "INVALID_CHILDREN"
+	case strings.Contains(msg, "unterminated"):
+		return "SYNTAX_ERROR"
+	case strings.Contains(msg, "expected"):
+		return "SYNTAX_ERROR"
+	default:
+		return "COMPILE_ERROR"
+	}
+}
+
+// inferExpected extracts a concise expected-value hint from common error messages.
+func inferExpected(message string) string {
+	msg := strings.ToLower(message)
+	switch {
+	case strings.Contains(msg, "expects string"):
+		return "string"
+	case strings.Contains(msg, "expects bool"):
+		return "bool"
+	case strings.Contains(msg, "expects int"):
+		return "int"
+	case strings.Contains(msg, "expects unit"):
+		return "unit (e.g. 20px, 50%, 1*)"
+	case strings.Contains(msg, "expects action"):
+		return "action (e.g. app:call() or ui:navigate(target=\"id\"))"
+	case strings.Contains(msg, "expects array"):
+		return "array"
+	case strings.Contains(msg, "expected '('"):
+		return "'('"
+	case strings.Contains(msg, "expected ')'"):
+		return "')'"
+	case strings.Contains(msg, "expected '='"):
+		return "'='"
+	case strings.Contains(msg, "expected ']'"):
+		return "']'"
+	case strings.Contains(msg, "component type"):
+		return "ComponentType (e.g. View, Stack, Text)"
+	case strings.Contains(msg, "attribute name"):
+		return "attribute name (lowercase identifier)"
+	case strings.Contains(msg, "attribute value"):
+		return "attribute value (string, bool, int, unit, action, or array)"
+	default:
+		return ""
+	}
+}
+
+func runExplain(stdout io.Writer) error {
+	content, err := docs.RenderExplain()
+	if err != nil {
+		return err
+	}
+	_, err = io.WriteString(stdout, content)
+	return err
 }

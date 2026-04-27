@@ -21,6 +21,7 @@ type Metadata struct {
 type Node struct {
 	Type       string         `json:"type"`
 	ID         string         `json:"id"`
+	Intent     string         `json:"intent,omitempty"`
 	Attributes map[string]any `json:"attributes,omitempty"`
 	Children   []*Node        `json:"children,omitempty"`
 }
@@ -55,6 +56,10 @@ func buildNode(node *ast.Node, path string, index map[string]IndexEntry) *Node {
 	jsonNode := &Node{
 		Type: node.Type,
 		ID:   node.ID(),
+	}
+
+	if spec, ok := registry.GetComponent(node.Type); ok && spec.Intent != "" {
+		jsonNode.Intent = spec.Intent
 	}
 
 	if attributes := convertAttributes(node.Attributes); len(attributes) > 0 {

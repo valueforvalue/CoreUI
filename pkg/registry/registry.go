@@ -10,11 +10,11 @@ import (
 
 const (
 	// Version is the current published registry version.
-	Version = "1.5.0"
+	Version = "1.6.0"
 	// SchemaCompatibility tracks the JSON schema compatibility contract.
 	SchemaCompatibility = "1.0"
 	// LastUpdated records the most recent registry catalog update date.
-	LastUpdated = "2026-04-26"
+	LastUpdated = "2026-04-27"
 )
 
 var standardThemeTokens = []string{"primary", "surface", "panel", "background", "text", "radius", "shadow", "speed"}
@@ -108,6 +108,7 @@ type AttributeSpec struct {
 type ComponentSpec struct {
 	Name        string
 	HasChildren bool
+	Intent      string
 	Attributes  map[string]AttributeSpec
 }
 
@@ -121,6 +122,7 @@ var componentSpecs = map[string]ComponentSpec{
 	"View": {
 		Name:        "View",
 		HasChildren: true,
+		Intent:      "layout-root",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"title": {Type: StringType},
 			"theme": {Type: StringType},
@@ -129,6 +131,7 @@ var componentSpecs = map[string]ComponentSpec{
 	"Stack": {
 		Name:        "Stack",
 		HasChildren: true,
+		Intent:      "layout-container",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"dir":   {Type: StringType, Enum: enumSet("h", "v")},
 			"gap":   {Type: UnitType},
@@ -138,6 +141,7 @@ var componentSpecs = map[string]ComponentSpec{
 	"Grid": {
 		Name:        "Grid",
 		HasChildren: true,
+		Intent:      "layout-container",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"cols": {Type: UnitArrayType},
 			"rows": {Type: UnitArrayType},
@@ -147,6 +151,7 @@ var componentSpecs = map[string]ComponentSpec{
 	"Box": {
 		Name:        "Box",
 		HasChildren: true,
+		Intent:      "layout-container",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"padding":    {Type: UnitType},
 			"border":     {Type: IntType},
@@ -155,7 +160,8 @@ var componentSpecs = map[string]ComponentSpec{
 		}),
 	},
 	"Text": {
-		Name: "Text",
+		Name:   "Text",
+		Intent: "data-label",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"value":  {Type: StringType},
 			"size":   {Type: UnitType},
@@ -163,7 +169,8 @@ var componentSpecs = map[string]ComponentSpec{
 		}),
 	},
 	"Input": {
-		Name: "Input",
+		Name:   "Input",
+		Intent: "data-entry",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"type":  {Type: StringType},
 			"label": {Type: StringType},
@@ -171,7 +178,8 @@ var componentSpecs = map[string]ComponentSpec{
 		}),
 	},
 	"Image": {
-		Name: "Image",
+		Name:   "Image",
+		Intent: "data-display",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"src":            {Type: StringType},
 			"compressed_src": {Type: StringType, DocType: "Base64-gzipped image"},
@@ -180,7 +188,8 @@ var componentSpecs = map[string]ComponentSpec{
 		}),
 	},
 	"Trigger": {
-		Name: "Trigger",
+		Name:   "Trigger",
+		Intent: "action-trigger",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"label":   {Type: StringType},
 			"action":  {Type: ActionType},
@@ -188,14 +197,16 @@ var componentSpecs = map[string]ComponentSpec{
 		}),
 	},
 	"DataTable": {
-		Name: "DataTable",
+		Name:   "DataTable",
+		Intent: "data-display",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"source":     {Type: StringType},
 			"selectable": {Type: BoolType},
 		}),
 	},
 	"Graph": {
-		Name: "Graph",
+		Name:   "Graph",
+		Intent: "data-display",
 		Attributes: mergeCommon(map[string]AttributeSpec{
 			"type":   {Type: StringType, Required: true, Enum: enumSet("line", "bar", "area", "pie")},
 			"data":   {Type: NumberArrayOrReferenceType, Required: true, DocType: "JSON Array or app:reference"},
@@ -207,10 +218,12 @@ var componentSpecs = map[string]ComponentSpec{
 	"Theme": {
 		Name:        "Theme",
 		HasChildren: true,
+		Intent:      "theme-definition",
 		Attributes:  mergeCommon(map[string]AttributeSpec{}),
 	},
 	"Color": {
-		Name: "Color",
+		Name:   "Color",
+		Intent: "theme-token",
 		Attributes: map[string]AttributeSpec{
 			"key":   {Type: StringType, Required: true},
 			"value": {Type: StringType, Required: true},
