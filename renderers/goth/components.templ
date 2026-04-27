@@ -84,6 +84,9 @@ templ unknownComponent(id string, nodeType string, style string, children []temp
 }
 
 templ pluginComponent(id string, pluginType string, style string, children []templ.Component) {
+	// Note: plugin components with data-cui-* attribute hydration are rendered by
+	// the pure-Go pluginComponentWithCUIAttrs function in renderer.go.
+	// This templ component is retained for backward compatibility.
 	<div id={ id } style={ style } data-coreui-plugin={ pluginType }>
 		for _, child := range children {
 			@child

@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"github.com/valueforvalue/coreui/pkg/compiler"
+	"github.com/valueforvalue/coreui/pkg/generator"
 	"github.com/valueforvalue/coreui/pkg/registry"
 	"github.com/valueforvalue/coreui/pkg/renderers"
 )
@@ -56,6 +57,7 @@ func New(filePath string) *Editor {
 	mux.HandleFunc("/api/source", e.handleSource)
 	mux.HandleFunc("/api/registry", e.handleRegistry)
 	mux.HandleFunc("/api/compile", e.handleCompile)
+	mux.HandleFunc("/api/save", e.handleSave)
 	mux.HandleFunc("/api/preview", e.handlePreview)
 	mux.HandleFunc("/api/upload", e.handleUpload)
 	e.mux = mux
@@ -171,6 +173,43 @@ func (e *Editor) handleCompile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = w.Write(data)
+}
+
+// handleSave accepts a POST request whose body is a JSON-encoded
+// generator.Output tree (as produced by /api/compile).  It marshals the tree
+// back to .cui DSL source via generator.MarshalDSL — which uses
+// ast.Value.ToDSLString() for every attribute — validates the result by
+// re-compiling it, and writes the file if validation passes.  The response is
+// the generated .cui source as plain text.
+func (e *Editor) handleSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var output generator.Output
+	if err := json.NewDecoder(r.Body).Decode(&output); err != nil {
+		http.Error(w, "invalid JSON body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	source, err := generator.MarshalDSL(output)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "marshal: " + err.Error()})
+		return
+	}
+	if _, compileErr := compiler.CompileSource("", source, compiler.Options{}); compileErr != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "validate: " + compileErr.Error()})
+		return
+	}
+	if err := os.WriteFile(e.filePath, []byte(source), 0o644); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, _ = w.Write([]byte(source))
 }
 
 // handlePreview accepts a JSON body {"Source":"..."}, compiles it, and returns
