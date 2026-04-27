@@ -70,7 +70,11 @@ const standaloneTemplate = `<!doctype html>
 {{- end }}
     const jsonData = {{ .JSONData }};
     document.addEventListener("DOMContentLoaded", () => {
-      new window.CoreUI(jsonData).render(document.getElementById("coreui-root"));
+      const _cuiRenderer = new window.CoreUI(jsonData);
+      _cuiRenderer.render(document.getElementById("coreui-root"));
+{{- if .HasFlow }}
+      {{ .FlowJS }}
+{{- end }}
     });
   </script>
 </body>
@@ -82,6 +86,8 @@ type standalonePageData struct {
 	JSONData   template.JS
 	DataJSON   template.JS
 	HasData    bool
+	FlowJS     template.JS
+	HasFlow    bool
 }
 
 // GetRendererJS returns the browser renderer module with embedded base styles.
@@ -115,6 +121,48 @@ func BuildStandaloneHTML(blueprintJSON []byte, data interface{}) (string, error)
 		}
 		pageData.HasData = true
 		pageData.DataJSON = template.JS(escapeJSONForScript(string(dataJSON)))
+	}
+
+	tmpl, err := template.New("standalone").Parse(standaloneTemplate)
+	if err != nil {
+		return "", err
+	}
+
+	var buffer bytes.Buffer
+	if err := tmpl.Execute(&buffer, pageData); err != nil {
+		return "", err
+	}
+
+	return buffer.String(), nil
+}
+
+// BuildStandaloneHTMLWithFlow renders a self-contained HTML document from a
+// compiled blueprint with an optional CoreFlow state engine injected before
+// the renderer bootstraps.
+//
+// flowJS may be empty, in which case no flow script is injected.
+func BuildStandaloneHTMLWithFlow(blueprintJSON []byte, data interface{}, flowJS string) (string, error) {
+	if !json.Valid(blueprintJSON) {
+		return "", errors.New("coreui blueprint is not valid JSON")
+	}
+
+	pageData := standalonePageData{
+		RendererJS: template.JS(escapeInlineScript(GetRendererJS() + "\nwindow.CoreUI = CoreUI;\n")),
+		JSONData:   template.JS(escapeJSONForScript(string(blueprintJSON))),
+	}
+
+	if data != nil {
+		dataJSON, err := json.Marshal(data)
+		if err != nil {
+			return "", err
+		}
+		pageData.HasData = true
+		pageData.DataJSON = template.JS(escapeJSONForScript(string(dataJSON)))
+	}
+
+	if flowJS != "" {
+		pageData.FlowJS = template.JS(escapeInlineScript(flowJS))
+		pageData.HasFlow = true
 	}
 
 	tmpl, err := template.New("standalone").Parse(standaloneTemplate)

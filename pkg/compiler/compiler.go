@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/valueforvalue/coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/flow"
+	"github.com/valueforvalue/coreui/pkg/flowgen"
 	"github.com/valueforvalue/coreui/pkg/generator"
 	"github.com/valueforvalue/coreui/pkg/parser"
 )
@@ -126,4 +128,128 @@ func assetBaseDir(name string) string {
 		return "."
 	}
 	return filepath.Dir(name)
+}
+
+// FlowResult holds the outputs produced by CompileWithFlow.
+type FlowResult struct {
+	// BlueprintJSON is the compiled .cui JSON blueprint.
+	BlueprintJSON []byte
+	// FlowJS is the generated CoreFlow state engine JavaScript.
+	FlowJS string
+	// Bindings are the reactive text/input bindings detected in the blueprint.
+	Bindings []flowgen.Binding
+}
+
+// CompileWithFlow compiles a .cui source together with a .flow source.
+// It validates that all On(id=...) references in the .flow file correspond to
+// component IDs in the .cui blueprint (Wiring Gap validation).
+//
+// When options.Standalone is true, the returned FlowResult.FlowJS is ready to
+// be injected into the standalone HTML via renderers.BuildStandaloneHTMLWithFlow.
+func CompileWithFlow(name, cuiSource, flowSource string, options Options) (*FlowResult, error) {
+	if options.Timestamp.IsZero() {
+		options.Timestamp = time.Now().UTC()
+	}
+	if options.Version == "" {
+		options.Version = "dev"
+	}
+
+	// Parse and compile the .cui document.
+	document, err := parser.New(cuiSource).ParseDocument()
+	if err != nil {
+		return nil, err
+	}
+
+	if options.Standalone {
+		embedImageSources(document, assetBaseDir(name))
+	}
+
+	// Parse the .flow document first so we can pass it to BuildWithFlow.
+	flowDoc, err := flow.ParseFlow(flowSource)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the JSON output, embedding initial flow state for GOTH parity.
+	output := generator.BuildWithFlow(document, flowDoc, options.Timestamp, options.Version)
+	blueprintJSON, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	blueprintJSON = append(blueprintJSON, '\n')
+
+	// Collect UI IDs from the compiled blueprint.
+	uiIDs := collectUIIDs(output.Index)
+
+	// Collect reactive bindings by traversing the generator node tree directly,
+	// avoiding a JSON round-trip.
+	bindings := collectBindingsFromNode(output.Tree)
+
+	// Generate the JS state engine (also validates wiring).
+	flowJS, err := flowgen.Generate(flowDoc, uiIDs, bindings, flowgen.Options{
+		RendererVar: "_cuiRenderer",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &FlowResult{
+		BlueprintJSON: blueprintJSON,
+		FlowJS:        flowJS,
+		Bindings:      bindings,
+	}, nil
+}
+
+// CompileFileWithFlow reads both a .cui file and a .flow file and compiles them.
+func CompileFileWithFlow(cuiPath, flowPath string, options Options) (*FlowResult, error) {
+	cuiData, err := os.ReadFile(cuiPath)
+	if err != nil {
+		return nil, err
+	}
+	flowData, err := os.ReadFile(flowPath)
+	if err != nil {
+		return nil, err
+	}
+	return CompileWithFlow(cuiPath, string(cuiData), string(flowData), options)
+}
+
+// collectUIIDs extracts the set of all component IDs from a generator index.
+func collectUIIDs(index map[string]generator.IndexEntry) map[string]bool {
+	ids := make(map[string]bool, len(index))
+	for id := range index {
+		ids[id] = true
+	}
+	return ids
+}
+
+// collectBindingsFromNode traverses a generator.Node tree and returns all
+// flow: attribute bindings without a JSON serialisation round-trip.
+func collectBindingsFromNode(node *generator.Node) []flowgen.Binding {
+	if node == nil {
+		return nil
+	}
+	var bindings []flowgen.Binding
+	walkNode(node, &bindings)
+	return bindings
+}
+
+func walkNode(node *generator.Node, out *[]flowgen.Binding) {
+	if node.ID != "" && node.Attributes != nil {
+		for attrName, attrVal := range node.Attributes {
+			s, ok := attrVal.(string)
+			if ok && len(s) > 5 && s[:5] == "flow:" {
+				varName := s[5:]
+				if varName != "" {
+					*out = append(*out, flowgen.Binding{
+						ElementID: node.ID,
+						AttrName:  attrName,
+						VarName:   varName,
+					})
+				}
+			}
+		}
+	}
+	for _, child := range node.Children {
+		walkNode(child, out)
+	}
 }

@@ -1,9 +1,11 @@
 package generator
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/valueforvalue/coreui/pkg/ast"
+	"github.com/valueforvalue/coreui/pkg/flow"
 	"github.com/valueforvalue/coreui/pkg/registry"
 )
 
@@ -13,9 +15,10 @@ type IndexEntry struct {
 }
 
 type Metadata struct {
-	CompiledAt      string `json:"compiled_at"`
-	Version         string `json:"version"`
-	RegistryVersion string `json:"registry_version"`
+	CompiledAt      string         `json:"compiled_at"`
+	Version         string         `json:"version"`
+	RegistryVersion string         `json:"registry_version"`
+	FlowState       map[string]any `json:"flow_state,omitempty"`
 }
 
 type Node struct {
@@ -50,6 +53,77 @@ func Build(document *ast.Document, compiledAt time.Time, version string) Output 
 			RegistryVersion: registry.Version,
 		},
 	}
+}
+
+// BuildWithFlow is like Build but also embeds the CoreFlow initial state values
+// into metadata.flow_state so the GOTH server renderer can seed the server-side
+// view to match the client state engine's starting values.
+func BuildWithFlow(document *ast.Document, flowDoc *flow.FlowDocument, compiledAt time.Time, version string) Output {
+	output := Build(document, compiledAt, version)
+	if flowDoc != nil && flowDoc.State != nil {
+		output.Metadata.FlowState = extractFlowState(flowDoc.State)
+	}
+	return output
+}
+
+// extractFlowState converts a StateBlock into a flat map of initial values
+// for inclusion in the JSON metadata.
+func extractFlowState(state *flow.StateBlock) map[string]any {
+	result := make(map[string]any, len(state.Vars))
+	for _, v := range state.Vars {
+		switch v.Kind {
+		case flow.VarKindList:
+			result[v.Name] = []any{}
+		case flow.VarKindMap:
+			result[v.Name] = map[string]any{}
+		default:
+			result[v.Name] = flowExprToValue(v.Init)
+		}
+	}
+	return result
+}
+
+// flowExprToValue converts a simple flow Expr to a Go value suitable for JSON.
+func flowExprToValue(expr flow.Expr) any {
+	if len(expr) == 0 {
+		return nil
+	}
+	// Single-token expressions are the common case for var declarations.
+	if len(expr) == 1 {
+		tok := expr[0]
+		switch tok.Kind {
+		case flow.TokBool:
+			return tok.Val == "true"
+		case flow.TokInt:
+			// Parse integer, handling an optional leading minus sign.
+			s := tok.Val
+			neg := len(s) > 0 && s[0] == '-'
+			if neg {
+				s = s[1:]
+			}
+			var n int64
+			for _, ch := range s {
+				n = n*10 + int64(ch-'0')
+			}
+			if neg {
+				n = -n
+			}
+			return n
+		case flow.TokFloat:
+			// Parse float to float64 for JSON consistency with integer values.
+			var f float64
+			_, _ = fmt.Sscanf(tok.Val, "%g", &f)
+			return f
+		case flow.TokStr:
+			return tok.Val
+		}
+	}
+	// Multi-token — return the raw expression string for reference.
+	parts := make([]string, 0, len(expr))
+	for _, tok := range expr {
+		parts = append(parts, tok.Val)
+	}
+	return parts
 }
 
 func buildNode(node *ast.Node, path string, index map[string]IndexEntry) *Node {
