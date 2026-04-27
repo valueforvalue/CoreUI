@@ -44,4 +44,18 @@ Structured Error Reporting: The `corec` CLI accepts a `--json-errors` flag. When
 
 AI agents must ingest this JSON and generate a patch for the `.cui` source file autonomously, without human intervention. The `errors` array may contain multiple entries to enable batch correction.
 
-Knowledge Injection: The `corec explain` command generates a single high-density Markdown document from the live registry and parser specs. It is designed to be piped into a local LLM to provide 100% CoreUI context while completely offline. The output includes: an EBNF grammar summary, a flat component/attribute/intent registry table, action wiring examples, and three golden `.cui` code examples.
+Knowledge Injection: The `corec explain` command generates a single high-density Markdown document from the live registry and parser specs. It is designed to be piped into a local LLM to provide 100% CoreUI context while completely offline. The output includes: an EBNF grammar summary, a flat component/attribute/intent registry table, action wiring examples, three golden `.cui` code examples, and the full CoreFlow DSL specification.
+
+7. The Logic Layer (v1.7.0)
+
+Separation of Concerns: The `.cui` file is purely about layout structure. The `.flow` file handles reactive state and event-driven logic ("the Juice"). Mixing behaviour into `.cui` attributes is prohibited.
+
+CoreFlow is the canonical DSL for client-side state. It is a minimal, block-based language with four block types: `State` (variable declarations), `On` (event handlers), `Compute` (derived state), and a restricted statement set (`set`, `add`, `toggle`, `if/else`, `call_service`). No freeform JavaScript is permitted inside `.flow` files.
+
+Scope Enforcement: If a logic requirement exceeds the CoreFlow statement set (e.g. WebSocket streaming, physics simulation, file I/O), it is out of scope for CoreFlow. The agent must delegate it via `call_service` to the Go backend through the `app:` action protocol. The compiler will reject any attempt to extend the CoreFlow grammar beyond the defined statement types.
+
+Wiring Gap Validation: The `corec` compiler validates that every `On(id=...)` reference in a `.flow` file corresponds to a component ID in the paired `.cui` blueprint. A missing match produces a `WIRING_GAP` structured error (under `--json-errors`) with `error_code: "WIRING_GAP"`, the offending ID, and an `expected` hint.
+
+Reactive Bridge: A `Text` component (or any string attribute) whose value starts with `flow:` is automatically linked to the named state variable. The generated state engine updates the element's content immediately when the variable changes, using a zero-dependency pub/sub pattern—no React, Vue, or external state library is permitted.
+
+Registry Parity: CoreFlow state variable names and initial values are exported in the JSON blueprint under `metadata.flow_state` so that the GOTH server renderer can seed the initial server-side view to match the client state engine's starting point.

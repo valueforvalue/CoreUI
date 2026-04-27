@@ -516,6 +516,7 @@ type ExplainData struct {
 	BuiltInActions  []string
 	GoWiringSnippet string
 	JSWiringSnippet string
+	CoreFlowSpec    string
 }
 
 // ExplainComponentDoc holds a compact row for the explain registry table.
@@ -651,6 +652,147 @@ View(id="diagram_view", title="System Metrics", theme="Modern") {
   }
 }
 ` + "```" + `
+
+{{ .CoreFlowSpec }}`
+
+// coreFlowSpec is the high-density CoreFlow DSL reference included in corec explain.
+const coreFlowSpec = `## 5. CoreFlow Logic Layer (v1.7.0)
+
+CoreFlow (` + "`.flow`" + `) is a minimal, block-based DSL that adds reactive state and
+event-driven logic to a CoreUI layout—without writing freeform JavaScript.
+
+### 5.1 Grammar (EBNF)
+
+` + "```ebnf" + `
+document     = { block } ;
+block        = state-block | on-block | compute-block ;
+
+state-block  = "State" "{" { var-decl } "}" ;
+var-decl     = ("var" ident "=" expr) | ("list" ident) | ("map" ident) ;
+
+on-block     = "On" "(" "id" "=" string "," "event" "=" string ")" "{" { stmt } "}" ;
+
+compute-block = "Compute" "(" "target" "=" string ")" "{" expr "}" ;
+
+stmt         = set-stmt | add-stmt | toggle-stmt | if-stmt | call-service-stmt ;
+set-stmt     = "set" ident "=" expr ;
+add-stmt     = "add" ident expr ;
+toggle-stmt  = "toggle" ident ;
+if-stmt      = "if" condition "{" { stmt } "}" [ "else" "{" { stmt } "}" ] ;
+call-service-stmt = "call_service" string [ "(" [ param { "," param } ] ")" ] ;
+param        = ident "=" expr ;
+
+condition    = expr comp-op expr ;
+comp-op      = "==" | "!=" | ">" | "<" | ">=" | "<=" ;
+
+expr         = atom { bin-op atom } ;
+atom         = ident | string | int | float | bool ;
+bin-op       = "+" | "-" | "*" | "/" ;
+` + "```" + `
+
+### 5.2 Blocks
+
+| Block | Purpose |
+|-------|---------|
+| ` + "`State { ... }`" + ` | Declare reactive state variables. Only one per file. |
+| ` + "`On(id=\"...\", event=\"...\") { ... }`" + ` | Attach logic to a UI element event. ` + "`id`" + ` must exist in the paired ` + "`.cui`" + ` file. |
+| ` + "`Compute(target=\"...\") { expr }`" + ` | Derived state: recomputes automatically when referenced vars change. |
+
+### 5.3 Statement Reference
+
+| Statement | Example | Effect |
+|-----------|---------|--------|
+| ` + "`set`" + ` | ` + "`set count = 0`" + ` | Assign a value to a state variable. |
+| ` + "`add`" + ` | ` + "`add count 1`" + ` | Increment (or decrement with negative) a numeric variable. |
+| ` + "`toggle`" + ` | ` + "`toggle isDark`" + ` | Flip a boolean variable. |
+| ` + "`if/else`" + ` | ` + "`if count > 0 { ... } else { ... }`" + ` | Conditional branch. |
+| ` + "`call_service`" + ` | ` + "`call_service \"api/save\" (key=\"v\")`" + ` | Dispatch a ` + "`coreflow:service`" + ` DOM event for the Go backend. Complex logic should be delegated here. |
+
+### 5.4 State Bindings
+
+Prefix a ` + "`Text.value`" + ` attribute with ` + "`flow:`" + ` to create a live reactive link:
+
+` + "```cui" + `
+Text(id="counter_text", value="flow:count")
+` + "```" + `
+
+When ` + "`count`" + ` changes in the flow engine, the element's text content updates instantly.
+
+### 5.5 Scope Limits
+
+CoreFlow is intentionally minimal. If a requirement exceeds the available statement
+set (e.g. a physics simulation, WebSocket management, or complex data transforms),
+delegate it via ` + "`call_service`" + ` to the Go backend through the ` + "`app:`" + ` action protocol.
+
+### 5.6 Wiring Gap Error
+
+If an ` + "`On(id=...)`" + ` block references a UI element that does not exist in the paired
+` + "`.cui`" + ` blueprint, the compiler emits a ` + "`WIRING_GAP`" + ` error:
+
+` + "```json" + `
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": 4,
+      "column": 1,
+      "error_code": "WIRING_GAP",
+      "message": "[Flow Error] ... WIRING_GAP — On(id=\"ghost_btn\") references UI element \"ghost_btn\" which does not exist in the .cui blueprint",
+      "expected": "A UI element with id=\"ghost_btn\" must exist in the .cui source"
+    }
+  ]
+}
+` + "```" + `
+
+### 5.7 CLI Usage
+
+` + "```sh" + `
+# Compile with flow, produce JSON blueprint
+corec -flow myapp.flow myapp.cui
+
+# Compile to a self-contained HTML with injected state engine
+corec -standalone -flow myapp.flow myapp.cui
+
+# Structured error output (enables WIRING_GAP codes)
+corec --json-errors -flow myapp.flow myapp.cui
+` + "```" + `
+
+### 5.8 Complete Example
+
+**myapp.cui**
+` + "```cui" + `
+View(id="root", title="Counter") {
+  Stack(id="main", dir="v", gap=16px) {
+    Text(id="count_label", value="flow:count")
+    Trigger(id="inc_btn", label="+1", variant="primary",   action=app:noop)
+    Trigger(id="dec_btn", label="-1", variant="secondary", action=app:noop)
+    Trigger(id="rst_btn", label="Reset", variant="outline", action=app:noop)
+  }
+}
+` + "```" + `
+
+**myapp.flow**
+` + "```flow" + `
+State {
+  var count = 0
+}
+
+On(id="inc_btn", event="click") {
+  add count 1
+}
+
+On(id="dec_btn", event="click") {
+  add count -1
+}
+
+On(id="rst_btn", event="click") {
+  set count = 0
+}
+
+Compute(target="isNegative") {
+  count < 0
+}
+` + "```" + `
 `
 
 // RenderExplain generates a high-density Markdown reference document from the
@@ -664,6 +806,7 @@ func RenderExplain() (string, error) {
 		BuiltInActions:  registry.BuiltInActions(),
 		GoWiringSnippet: goWiringSnippet,
 		JSWiringSnippet: jsWiringSnippet,
+		CoreFlowSpec:    coreFlowSpec,
 	}
 
 	for _, comp := range components {

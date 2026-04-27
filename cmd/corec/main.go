@@ -20,6 +20,7 @@ import (
 	"github.com/valueforvalue/coreui/pkg/diag"
 	"github.com/valueforvalue/coreui/pkg/docs"
 	"github.com/valueforvalue/coreui/pkg/editor"
+	"github.com/valueforvalue/coreui/pkg/flowgen"
 	"github.com/valueforvalue/coreui/pkg/registry"
 	"github.com/valueforvalue/coreui/pkg/renderers"
 )
@@ -173,12 +174,14 @@ func main() {
 	var showVersion bool
 	var standalone bool
 	var jsonErrors bool
+	var flowPath string
 
 	flag.StringVar(&outputPath, "o", "", "output JSON path")
 	flag.BoolVar(&standalone, "standalone", false, "write standalone HTML output")
 	flag.BoolVar(&standalone, "s", false, "write standalone HTML output")
 	flag.BoolVar(&showVersion, "version", false, "print version")
 	flag.BoolVar(&jsonErrors, "json-errors", false, "emit structured JSON error object to stderr on compile failure")
+	flag.StringVar(&flowPath, "flow", "", "CoreFlow .flow file to compile and wire into the output")
 	flag.Parse()
 
 	if showVersion {
@@ -187,7 +190,7 @@ func main() {
 	}
 
 	if flag.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec doctor | corec context | corec explain | corec edit <file.cui> | corec [-standalone] [-json-errors] [-o output.{json|html}] input.cui")
+		fmt.Fprintln(os.Stderr, "usage: corec init <project-name> | corec doctor | corec context | corec explain | corec edit <file.cui> | corec [-standalone] [-flow <file.flow>] [-json-errors] [-o output.{json|html}] input.cui")
 		os.Exit(1)
 	}
 
@@ -196,6 +199,39 @@ func main() {
 		outputPath = defaultOutputPath(inputPath, standalone)
 	}
 
+	// ── CoreFlow compilation path ────────────────────────────────────────────
+	if flowPath != "" {
+		result, err := compiler.CompileFileWithFlow(inputPath, flowPath, compiler.Options{Version: version, Standalone: standalone})
+		if err != nil {
+			if jsonErrors {
+				cuiSource, _ := os.ReadFile(inputPath)
+				writeJSONErrors(os.Stderr, err, string(cuiSource))
+			} else {
+				fmt.Fprintln(os.Stderr, err.Error())
+			}
+			os.Exit(1)
+		}
+
+		var outputData []byte
+		if standalone {
+			outputData, err = buildStandaloneHTMLWithFlow(result.BlueprintJSON, result.FlowJS)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+				os.Exit(1)
+			}
+		} else {
+			outputData = result.BlueprintJSON
+		}
+
+		if err := os.WriteFile(outputPath, outputData, 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
+		fmt.Println(outputPath)
+		return
+	}
+
+	// ── Standard (no flow) compilation path ──────────────────────────────────
 	data, err := compiler.CompileFile(inputPath, compiler.Options{Version: version, Standalone: standalone})
 	if err != nil {
 		if jsonErrors {
@@ -435,6 +471,14 @@ func buildStandaloneHTML(jsonData []byte) ([]byte, error) {
 	return []byte(html), nil
 }
 
+func buildStandaloneHTMLWithFlow(jsonData []byte, flowJS string) ([]byte, error) {
+	html, err := renderers.BuildStandaloneHTMLWithFlow(jsonData, nil, flowJS)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(html), nil
+}
+
 func findProjectFile(name string) (string, error) {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -514,6 +558,17 @@ func writeJSONErrors(w io.Writer, err error, source string) {
 func collectErrorEntries(err error, sourceLines []string) []jsonErrorEntry {
 	if err == nil {
 		return nil
+	}
+	// Check for a CoreFlow wiring gap first.
+	var gap *flowgen.WiringGap
+	if errors.As(err, &gap) {
+		return []jsonErrorEntry{{
+			Line:      gap.Line,
+			Column:    gap.Col,
+			ErrorCode: "WIRING_GAP",
+			Message:   gap.Error(),
+			Expected:  fmt.Sprintf("A UI element with id=%q must exist in the .cui source", gap.FlowRef),
+		}}
 	}
 	var de *diag.Error
 	if errors.As(err, &de) {
