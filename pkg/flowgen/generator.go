@@ -152,7 +152,8 @@ func Generate(doc *flow.FlowDocument, uiIDs map[string]bool, bindings []Binding,
 				writeStatement(&b, stmt, "      ")
 			}
 			b.WriteString("    });\n")
-			b.WriteString("  }\n")
+			b.WriteString(fmt.Sprintf("  } else {\n    console.warn(%q);\n  }\n",
+				fmt.Sprintf("CoreFlow: element %q not found — On handler skipped", on.TargetID)))
 		}
 		b.WriteString("\n")
 	}
@@ -222,6 +223,12 @@ func initialJSValue(v *flow.VarDecl) string {
 }
 
 // exprToJS converts a flow.Expr to a JavaScript expression string.
+// Identifier tokens are emitted as _state.<name> because, by design, all
+// identifiers that appear in CoreFlow expressions must refer to declared state
+// variables — the flow DSL has no concept of local bindings or JS built-ins.
+// Any identifier that is not in the State block will simply resolve to
+// _state.<name> at runtime (which will be undefined), consistent with the
+// "no implicit magic" architecture principle.
 func exprToJS(expr flow.Expr) string {
 	if len(expr) == 0 {
 		return "undefined"
@@ -325,7 +332,6 @@ func writeStatement(b *strings.Builder, stmt flow.Statement, indent string) {
 	case flow.StmtService:
 		// call_service dispatches a custom DOM event so the Go backend layer
 		// can listen via the app: protocol — out-of-scope for freeform JS.
-		params := map[string]any{}
 		// Build a sorted-key param object literal for deterministic output.
 		keys := make([]string, 0, len(stmt.Params))
 		for k := range stmt.Params {
@@ -336,7 +342,6 @@ func writeStatement(b *strings.Builder, stmt flow.Statement, indent string) {
 		for _, k := range keys {
 			paramParts = append(paramParts, fmt.Sprintf("%s: %s", k, exprToJS(stmt.Params[k])))
 		}
-		_ = params
 		paramsJS := "{" + strings.Join(paramParts, ", ") + "}"
 		b.WriteString(fmt.Sprintf(
 			"%sdocument.dispatchEvent(new CustomEvent(\"coreflow:service\", { detail: { service: %s, params: %s } }));\n",

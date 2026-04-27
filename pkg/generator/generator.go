@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/valueforvalue/coreui/pkg/ast"
@@ -94,20 +95,25 @@ func flowExprToValue(expr flow.Expr) any {
 		case flow.TokBool:
 			return tok.Val == "true"
 		case flow.TokInt:
+			// Parse integer, handling an optional leading minus sign.
+			s := tok.Val
+			neg := len(s) > 0 && s[0] == '-'
+			if neg {
+				s = s[1:]
+			}
 			var n int64
-			for _, ch := range tok.Val {
-				if ch == '-' {
-					continue
-				}
+			for _, ch := range s {
 				n = n*10 + int64(ch-'0')
 			}
-			if len(tok.Val) > 0 && tok.Val[0] == '-' {
+			if neg {
 				n = -n
 			}
 			return n
 		case flow.TokFloat:
-			// Return as string; caller can parse if needed.
-			return tok.Val
+			// Parse float to float64 for JSON consistency with integer values.
+			var f float64
+			_, _ = fmt.Sscanf(tok.Val, "%g", &f)
+			return f
 		case flow.TokStr:
 			return tok.Val
 		}
